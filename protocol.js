@@ -4,6 +4,15 @@ export const EVENT = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 export const OTA_DATA = '6e400004-b5a3-f393-e0a9-e50e24dcca9e';
 export const PROTOCOL_VERSION = 1;
 
+export function errorText(error) {
+  if (typeof error === 'string' && error.trim()) return error.trim();
+  for (const key of ['message', 'description', 'reason', 'error']) {
+    if (typeof error?.[key] === 'string' && error[key].trim()) return error[key].trim();
+  }
+  if (error?.code !== undefined) return `BLE-Fehlercode ${String(error.code)}`;
+  return 'Der Browser hat den BLE-Vorgang ohne Fehlerbeschreibung abgebrochen.';
+}
+
 // One decoder per connection. BLE notifications may split any UTF-8 character.
 export class JsonLines {
   constructor(onValue, onError = () => {}) {
@@ -63,7 +72,18 @@ export class CommanderBle extends EventTarget {
   emit(name, detail) { this.dispatchEvent(new CustomEvent(name, { detail })); }
   async choose() {
     if (!navigator.bluetooth) throw new Error('Dieser Browser bietet kein Web Bluetooth. Der Demo-Modus ist verfügbar.');
-    const device = await navigator.bluetooth.requestDevice({ filters: [{ services: [SERVICE] }] });
+    let device;
+    this.emit('state', { state: 'connecting', stage: 'Geräteauswahl öffnen' });
+    try { device = await navigator.bluetooth.requestDevice({ filters: [{ services: [SERVICE] }], optionalServices: [SERVICE] }); }
+    catch (error) {
+      this.emit('state', { state: 'disconnected' });
+      if (error?.name === 'NotFoundError') throw error;
+      throw new Error(`Geräteauswahl: ${errorText(error)}`);
+    }
+    if (!device?.gatt) {
+      this.emit('state', { state: 'disconnected' });
+      throw new Error('Die Geräteauswahl hat kein BLE-Gerät mit GATT-Verbindung zurückgegeben.');
+    }
     this.disconnect();
     if (this.device) this.device.removeEventListener('gattserverdisconnected', this.onDisconnect);
     this.device = device; device.addEventListener('gattserverdisconnected', this.onDisconnect);
@@ -84,7 +104,8 @@ export class CommanderBle extends EventTarget {
         ]);
         if (attempt !== this.connectAttempt) throw new Error('Verbindungsaufbau abgebrochen.');
         return result;
-      } finally { clearTimeout(timer); }
+      } catch (error) { throw new Error(`${label}: ${errorText(error)}`); }
+      finally { clearTimeout(timer); }
     };
     try {
       this.lines.reset();

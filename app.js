@@ -1,4 +1,4 @@
-import { CommanderBle } from './protocol.js';
+import { CommanderBle, errorText } from './protocol.js';
 const $ = id => document.getElementById(id);
 const ble = new CommanderBle();
 const number = new Intl.NumberFormat('de-DE');
@@ -86,7 +86,7 @@ async function connect(reconnect = false) {
   if (busy) return;
   stopDemo(); busy = true; refreshControls();
   try { reconnect ? await ble.connect() : await ble.choose(); }
-  catch (error) { if (error.name !== 'NotFoundError') { toast(error.message); log(`Verbindung: ${error.message}`); } }
+  catch (error) { if (error?.name !== 'NotFoundError') { const text = errorText(error); toast(text); log(`Verbindung: ${text}`); } }
   finally { busy = false; refreshControls(); }
 }
 for (const id of ['connectTop', 'connectMain', 'connectSettings']) $(id).onclick = () => connect();
