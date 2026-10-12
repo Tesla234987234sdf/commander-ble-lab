@@ -52,9 +52,10 @@ export function validateImage(data, maxSize = 4 * 1024 * 1024) {
 }
 
 export class CommanderBle extends EventTarget {
-  constructor() {
+  constructor({ connectTimeout = 12000 } = {}) {
     super(); this.device = null; this.ready = false; this.pending = new Map();
     this.sequence = 0; this.queue = Promise.resolve(); this.uploading = false;
+    this.connectTimeout = connectTimeout; this.connectAttempt = 0; this.activeConnectAttempt = 0;
     this.lines = new JsonLines(message => this.receive(message), error => this.emit('protocolerror', error));
     this.onDisconnect = () => this.lost();
     this.onNotification = event => this.lines.push(event.target.value);
@@ -70,27 +71,47 @@ export class CommanderBle extends EventTarget {
   }
   async connect() {
     if (!this.device) throw new Error('Bitte zuerst ein Gerät auswählen.');
-    this.emit('state', { state: 'connecting' });
+    const attempt = ++this.connectAttempt, device = this.device;
+    this.activeConnectAttempt = attempt;
+    const step = async (label, action) => {
+      if (attempt !== this.connectAttempt) throw new Error('Verbindungsaufbau abgebrochen.');
+      this.emit('state', { state: 'connecting', stage: label });
+      let timer;
+      try {
+        const result = await Promise.race([
+          Promise.resolve().then(action),
+          new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`Zeitüberschreitung: ${label}. Bitte das Board neu starten und erneut verbinden.`)), this.connectTimeout); })
+        ]);
+        if (attempt !== this.connectAttempt) throw new Error('Verbindungsaufbau abgebrochen.');
+        return result;
+      } finally { clearTimeout(timer); }
+    };
     try {
       this.lines.reset();
-      const server = await this.device.gatt.connect();
-      const service = await server.getPrimaryService(SERVICE);
-      this.command = await service.getCharacteristic(COMMAND);
+      const server = await step('Bluetooth-Verbindung öffnen', async () => {
+        const result = await device.gatt.connect();
+        if (attempt !== this.connectAttempt && this.device === device && !this.ready && !this.activeConnectAttempt) device.gatt.disconnect();
+        return result;
+      });
+      const service = await step('Commander-Dienst suchen', () => server.getPrimaryService(SERVICE));
+      this.command = await step('Befehlskanal öffnen', () => service.getCharacteristic(COMMAND));
       this.event?.removeEventListener('characteristicvaluechanged', this.onNotification);
-      this.event = await service.getCharacteristic(EVENT);
-      this.data = await service.getCharacteristic(OTA_DATA);
+      this.event = await step('Statuskanal öffnen', () => service.getCharacteristic(EVENT));
+      this.data = await step('Updatekanal öffnen', () => service.getCharacteristic(OTA_DATA));
       this.event.addEventListener('characteristicvaluechanged', this.onNotification);
-      await this.event.startNotifications();
-      const hello = await this.request('hello');
+      await step('Statusbenachrichtigungen aktivieren', () => this.event.startNotifications());
+      const hello = await step('Firmware-Antwort abwarten', () => this.request('hello'));
       if (hello.protocol !== PROTOCOL_VERSION || hello.board !== 'esp32-devkitc-lab' || hello.simulated !== true)
         throw new Error('Das Gerät verwendet nicht die passende BLE-Lab-Testfirmware.');
       this.info = hello; this.ready = true;
       this.emit('state', { state: 'connected', info: hello, name: this.device.name });
       await this.request('get_status');
       return hello;
-    } catch (error) { this.disconnect(); throw error; }
+    } catch (error) { if (this.activeConnectAttempt === attempt) this.disconnect(); throw error; }
+    finally { if (this.activeConnectAttempt === attempt) this.activeConnectAttempt = 0; }
   }
   lost() {
+    this.connectAttempt++;
     this.ready = false; this.lines.reset();
     this.event?.removeEventListener('characteristicvaluechanged', this.onNotification);
     for (const item of this.pending.values()) { clearTimeout(item.timer); item.reject(new Error('BLE-Verbindung getrennt.')); }
@@ -102,6 +123,14 @@ export class CommanderBle extends EventTarget {
   disconnect() {
     if (this.device?.gatt.connected) this.device.gatt.disconnect();
     this.lost();
+  }
+  async write(characteristic, bytes) {
+    // Older Web Bluetooth bridges expose only writeValue. Both firmware write
+    // characteristics support WRITE, so the legacy API uses acknowledged writes.
+    if (typeof characteristic?.writeValueWithResponse === 'function')
+      return characteristic.writeValueWithResponse(bytes);
+    if (typeof characteristic?.writeValue === 'function') return characteristic.writeValue(bytes);
+    throw new Error('Der Browser bietet keinen unterstützten BLE-Schreibzugriff.');
   }
   receive(message) {
     if (!message || typeof message !== 'object') return;
@@ -128,7 +157,7 @@ export class CommanderBle extends EventTarget {
       }, timeout);
       this.pending.set(id, { resolve, reject, timer });
       const write = (async () => {
-        for (const chunk of encodeCommand({ id, op, ...args })) await this.command.writeValueWithResponse(chunk);
+        for (const chunk of encodeCommand({ id, op, ...args })) await this.write(this.command, chunk);
       })();
       try { const [, response] = await Promise.all([write, answer]); return response; }
       finally { clearTimeout(timer); this.pending.delete(id); }
@@ -165,7 +194,7 @@ export class CommanderBle extends EventTarget {
         signal?.throwIfAborted();
         const next = Math.min(offset + chunkSize, bytes.length);
         const ack = this.waitAck(next, signal);
-        const write = this.data.writeValueWithResponse(otaPacket(offset, bytes.subarray(offset, next)));
+        const write = this.write(this.data, otaPacket(offset, bytes.subarray(offset, next)));
         try { await Promise.all([write, ack]); }
         catch (error) { this.ack?.reject(error); throw error; }
         offset = next; progress(offset / bytes.length);

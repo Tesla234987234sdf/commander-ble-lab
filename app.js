@@ -94,8 +94,14 @@ $('reconnectButton').onclick = () => connect(true);
 $('disconnectButton').onclick = () => ble.disconnect();
 ble.addEventListener('state', ({ detail }) => {
   if (detail.state === 'connected') { mode = 'ble'; sessionStart = Date.now(); showMode(); log(`Verbunden mit ${detail.name}. Fahrzeugdaten sind simuliert.`); }
-  if (detail.state === 'connecting') $('connectionBadge').textContent = 'Verbindung wird aufgebaut …';
-  if (detail.state === 'disconnected' && mode === 'ble') { mode = 'none'; resetStatus(); showMode(); log('BLE-Verbindung getrennt. Wiederverbindung über „Verbindung“.'); }
+  if (detail.state === 'connecting') {
+    $('connectionBadge').textContent = `${detail.stage || 'Verbindung wird aufgebaut'} …`;
+    if (detail.stage) log(`BLE: ${detail.stage} …`);
+  }
+  if (detail.state === 'disconnected' && mode !== 'demo') {
+    const wasConnected = mode === 'ble'; mode = 'none'; resetStatus(); showMode();
+    if (wasConnected) log('BLE-Verbindung getrennt. Wiederverbindung über „Verbindung“.');
+  }
 });
 ble.addEventListener('message', ({ detail }) => {
   if (detail.type === 'status') renderStatus(detail);
