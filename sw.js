@@ -1,4 +1,4 @@
-const CACHE = 'commander-ble-lab-v1.0.2-refresh';
+const CACHE = 'commander-ble-lab-v1.0.3';
 const SHELL = ['./', './index.html', './styles.css', './app.js', './protocol.js', './icon.svg', './manifest.webmanifest'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache =>
   cache.addAll(SHELL.map(url => new Request(url, { cache: 'reload' }))))));
