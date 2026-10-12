@@ -1,6 +1,7 @@
-const CACHE = 'commander-ble-lab-v1.0.2';
+const CACHE = 'commander-ble-lab-v1.0.2-refresh';
 const SHELL = ['./', './index.html', './styles.css', './app.js', './protocol.js', './icon.svg', './manifest.webmanifest'];
-self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL))));
+self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache =>
+  cache.addAll(SHELL.map(url => new Request(url, { cache: 'reload' }))))));
 self.addEventListener('activate', event => event.waitUntil((async () => {
   for (const key of await caches.keys()) if (key.startsWith('commander-ble-lab-') && key !== CACHE) await caches.delete(key);
   await self.clients.claim();
