@@ -1,0 +1,11 @@
+The dashboard HTML and CSS are derived from web_dashboard.cpp in
+hypery11/flipper-tesla-fsd (https://github.com/hypery11/flipper-tesla-fsd),
+including the user's local IDFILTER-MARKER-V8 changes.
+
+The upstream project provides these sources under the GNU General Public
+License, version 3 or (at your option) any later version. See LICENSE.
+
+This version replaces the HTTP/WebSocket transport with a BLE bench-board
+adapter. Vehicle controls unsupported by the bench firmware are disabled.
+All vehicle/CAN status data supplied by the bench firmware is simulated.
+The website's complete HTML, CSS and JavaScript source is distributed here.

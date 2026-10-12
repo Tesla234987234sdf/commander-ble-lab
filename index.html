@@ -1,49 +1,564 @@
-<!doctype html>
-<html lang="de">
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111715"><meta name="description" content="Commander BLE Lab – lokale Bluetooth-Verbindung und Testoberfläche für ESP32.">
-  <title>Commander · BLE Lab</title>
-  <link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a1a">
+<link rel="icon" href="data:,">
+<title>Tesla FSD</title>
+<link rel="stylesheet" href="./styles.css"><link rel="manifest" href="./manifest.webmanifest">
 </head>
 <body>
-<div class="web-version-banner" id="webVersion">COMMANDER BLE LAB · WEB 1.0.3</div>
-<aside class="sidebar">
-  <a class="brand" href="./" aria-label="Commander Startseite"><span class="brand-mark">C<span>↗</span></span><span>COMMANDER<small>BLE LAB / 01</small></span></a>
-  <span class="nav-label">WORKSPACE</span>
-  <nav aria-label="Hauptnavigation">
-    <button class="nav-item selected" data-view="overview" aria-current="page"><span>◫</span> Übersicht</button>
-    <button class="nav-item" data-view="connection"><span>⌁</span> Verbindung</button>
-    <button class="nav-item" data-view="firmware"><span>↥</span> Firmware</button>
-    <button class="nav-item" data-view="guide"><span>≡</span> Erste Schritte</button>
-  </nav>
-  <div class="sidebar-bottom"><span class="tiny-dot"></span> Lokal über Bluetooth<small>GitHub Pages liefert nur die Oberfläche.</small><span class="mono">WEB 1.0.3 · PROTOKOLL 1</span></div>
-</aside>
-<div class="workspace">
-  <header class="topbar"><span id="breadcrumb">Workspace / Übersicht</span><div class="top-actions"><span class="status-pill" id="connectionBadge"><i></i> Nicht verbunden</span><button class="button small" id="connectTop">Verbinden <span>↗</span></button></div></header>
-  <main>
-    <div id="compatibility" class="notice" hidden></div>
-    <div id="updateNotice" class="notice" hidden>Eine neue Webversion ist verfügbar. <button id="reloadApp">Jetzt laden</button></div>
-    <div id="demoNotice" class="demo-notice" hidden><span>◈ DEMO AKTIV</span> Alle Fahrzeugdaten, Zähler und Schalter sind simuliert.<button id="stopDemo">Demo beenden</button></div>
-    <section class="view" id="view-overview">
-      <div class="page-heading"><div><p class="eyebrow">DEIN COMMANDER. DIREKT VERBUNDEN.</p><h1>Alles im Blick<span>.</span></h1><p class="muted">Fahrzeugstatus und Steuerung – über eine lokale BLE-Verbindung.</p></div><button class="button secondary" id="demoButton">Demo ausprobieren <span>→</span></button></div>
-      <div class="overview-grid">
-        <article class="panel vehicle-panel"><div class="panel-header"><span class="eyebrow">FAHRZEUG / SIMULATION</span><span class="tag" id="sourceTag">Keine Daten</span></div>
-          <div class="vehicle-title"><h2>Bereit für die Verbindung.</h2><p id="vehicleSubtitle">Verbinde dein ESP32-Testboard oder starte die Demo.</p></div>
-          <div class="vehicle-art" aria-hidden="true"><svg viewBox="0 0 620 240" fill="none"><defs><linearGradient id="body" x1="300" y1="65" x2="300" y2="188" gradientUnits="userSpaceOnUse"><stop stop-color="#b5c4bc"/><stop offset=".48" stop-color="#596b61"/><stop offset="1" stop-color="#293c31"/></linearGradient><linearGradient id="glass"><stop stop-color="#1a2922"/><stop offset="1" stop-color="#354a3e"/></linearGradient></defs><ellipse cx="310" cy="204" rx="231" ry="12" fill="#050a07" opacity=".5"/><path d="M76 159l25-32 82-17 64-53c14-10 111-14 136-3l74 53 52 13 30 38-5 28H79z" fill="url(#body)" stroke="#99b2a1" stroke-opacity=".5"/><path d="M204 109l48-43c13-6 39-8 60-8v53zm121-51c29 0 45 0 54 6l61 45-115 2z" fill="url(#glass)" stroke="#71877a"/><path d="M111 137l76-13m260 1 56 14M200 119l-6 60m128-58 1 62m118-61 12 53M209 128h22m104 0h22" stroke="#c5d9cb" stroke-opacity=".35"/><path d="M82 158l69-3m343-2 34 4" stroke="#d7f5e4" stroke-width="4"/><circle cx="171" cy="179" r="31" fill="#0b110e" stroke="#596c60" stroke-width="4"/><circle cx="171" cy="179" r="16" stroke="#8da194" stroke-width="6"/><circle cx="453" cy="179" r="31" fill="#0b110e" stroke="#596c60" stroke-width="4"/><circle cx="453" cy="179" r="16" stroke="#8da194" stroke-width="6"/></svg><div class="art-grid"></div></div>
-          <div class="vehicle-values"><div><span>BATTERIE</span><strong id="battery">—<small>%</small></strong><div class="battery-track"><i id="batteryFill"></i></div></div><div><span>LADELEISTUNG</span><strong id="power">—<small>kW</small></strong></div><div><span>CP TYPE</span><strong id="cpType">—</strong><small id="cpDetail">Wartet auf Status</small></div></div>
-        </article>
-        <article class="panel device-panel"><div class="panel-header"><span class="eyebrow">VERBINDUNG</span><span class="bluetooth-symbol">ᛒ</span></div><h2 id="deviceName">Dein Testboard</h2><p class="muted" id="deviceSummary">AZDelivery ESP32 Dev Kit C<br>BLE-Testfirmware benötigt.</p><div class="connection-route"><span>Browser</span><i>••••••</i><span>BLE</span><i>••••••</i><span>ESP32</span></div><dl class="detail-list"><div><dt>Transport</dt><dd id="transport">—</dd></div><div><dt>Firmware</dt><dd id="fwVersion">—</dd></div><div><dt>Letzter Status</dt><dd id="lastSeen">—</dd></div></dl><button class="button primary full" id="connectMain">Mit Testboard verbinden <span>↗</span></button></article>
+<div class="wrap">
+
+<!-- Header -->
+<div class="hdr">
+  <h1>Tesla FSD</h1>
+  <div class="sub">ESP32 BLE Testboard &middot; <span id="deviceHost">device.local</span><br>
+    <span class="fwtag" id="fwTag">WEB 2.0.0 · BLE</span>
+  </div>
+  <div class="cdot off" id="dot"></div>
+</div>
+<div id="connErr" class="err">Nicht verbunden. Über „Verbinden“ ein Testboard auswählen.</div>
+
+<div id="restartConfirmPanel" class="confirm-panel">
+  <div class="auth-box">
+    <h3>Restart device?</h3>
+    <div class="auth-msg">The device will reboot immediately and the web connection will drop briefly.</div>
+    <div class="auth-actions">
+      <button type="button" class="btn-main btn-stop">No</button>
+      <button type="button" class="btn-main btn-yellow">Yes</button>
+    </div>
+  </div>
+</div>
+
+<div class="card ble-card">
+  <div class="card-head"><div class="icon ic-b">B</div><h2>Bluetooth</h2><span class="pill off" id="connectionBadge">Nicht verbunden</span></div>
+  <div class="log-info" id="deviceName">Commander-Lab · Testboard auswählen</div>
+  <div class="log-actions"><button class="btn-main btn-blue" id="connectButton">Verbinden</button><button class="btn-main btn-stop" id="disconnectButton">Trennen</button></div>
+  <div class="log-actions"><button class="btn-main btn-act" id="demoButton">Demo</button><button class="btn-main btn-yellow" id="stopDemo">Demo beenden</button></div>
+  <div class="row"><span class="lbl">Statusintervall</span><select id="intervalSelect"><option value="500">500 ms</option><option value="1000" selected>1000 ms</option><option value="2000">2000 ms</option></select></div>
+  <div class="lab-note">BLE-Testbetrieb · Alle Fahrzeugwerte und CAN-Zähler sind simuliert. Kein Fahrzeug-CAN angeschlossen. Weitere Bedienelemente sind bis zur Firmware-Anbindung deaktiviert.</div>
+  <div id="updateNotice" class="lab-note" hidden>Neue Webversion verfügbar. <button class="test-btn" id="reloadApp">Jetzt laden</button></div>
+  <div id="networkStatus" class="log-info"></div>
+</div>
+<!-- OTA Warning -->
+<div id="otaBanner" class="ota">&#9888;&#xFE0F; OTA UPDATE IN PROGRESS &mdash; CAN TX SUSPENDED</div>
+
+<!-- Autopark Warning (#180) -->
+<div id="autoparkBanner" class="ota">&#9888;&#xFE0F; IN-CAR AUTOPARK &mdash; CAN TX PAUSED</div>
+
+<!-- Signal Map watchdog (#100) -->
+<div id="sigmapWarn" class="warn14x"><div class="w-row"><div class="w-msg">
+  <strong>&#9888;&#xFE0F; Signal Map DAS id not seen on this bus.</strong>
+  The configured DAS id isn't arriving, so AP-state can't be read and the nag
+  killer is paused. Set <b>DAS id 0</b> for auto, or fix the mapping / tap.
+</div></div></div>
+
+<!-- 2026.14.x Firmware Warning -->
+<div id="warn14x" class="warn14x">
+  <div class="w-row">
+    <div class="w-msg">
+      <strong>&#9888;&#xFE0F; 2026.14.x firmware enforcement active.</strong>
+      Tesla added a preflight check in 2026.14.x that disables autosteer
+      the moment any CAN frame touches <code>0x3FD</code>. Symptom on
+      the dash: <em>"Autopilot turning off"</em> appears within a second
+      of stalk engagement, then AP immediately disengages. Listen-Only
+      mode is safe. <strong>AP-First</strong> (delay injection until AP is
+      engaged) is on the Flipper build only right now — on the ESP32, engage
+      AP from the stalk first, then turn on injection. Dismiss if you're on
+      pre-14.x firmware.
+    </div>
+    <button class="w-dismiss">Dismiss</button>
+  </div>
+</div>
+
+<!-- FSD Status -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-s">S</div><h2>FSD Status</h2></div>
+  <div class="row">
+    <span class="lbl">AP Status</span>
+    <span class="pill off" id="fsdSt"><span class="pd"></span>--</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Mode</span>
+    <span class="pill off" id="opMode"><span class="pd"></span>Testboard</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Hardware</span>
+    <span class="pill off" id="hwVer"><span class="pd"></span>--</span>
+  </div>
+  <div class="row" id="rowHw3Spd" style="display:none">
+    <span class="lbl">HW3 Speed<span class="hint">car &rarr; sent</span></span>
+    <span id="hw3Spd" style="font-size:.8em;color:var(--text2)">--</span>
+  </div>
+  <div class="row">
+    <span class="lbl">NAG Killer</span>
+    <span class="pill off" id="nagSt"><span class="pd"></span>--</span>
+  </div>
+  <div class="row">
+    <span class="lbl">CAN Vehicle</span>
+    <span class="pill off" id="canVeh"><span class="pd"></span>--</span>
+  </div>
+</div>
+
+<!-- Battery -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-b">B</div><h2>Battery</h2></div>
+  <div class="row">
+    <span class="lbl">BMS Status</span>
+    <span class="pill off" id="bmsSt"><span class="pd"></span>Waiting Frames</span>
+  </div>
+  <div class="row">
+    <span class="lbl">BMS Frames</span>
+    <span id="bmsFrames" style="font-size:.8em;color:var(--text2)">HV:0 SOC:0 TH:0</span>
+  </div>
+  <div class="hero">
+    <div class="soc-ring">
+      <svg viewBox="0 0 120 120" width="120" height="120">
+        <circle class="trk" cx="60" cy="60" r="52"/>
+        <circle class="bar" id="socBar" cx="60" cy="60" r="52"
+          stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+      </svg>
+      <div class="soc-val">
+        <span class="soc-num" id="bSoc">--</span>
+        <span class="soc-lbl">SOC</span>
       </div>
-      <div class="metrics"><article class="panel metric"><span class="eyebrow">RX FRAMES <em>SIMULIERT</em></span><strong id="rxFrames">—</strong><small>Empfang im Testmodell</small></article><article class="panel metric"><span class="eyebrow">TX FRAMES <em>SIMULIERT</em></span><strong id="txFrames">—</strong><small>CP-Korrekturen im Testmodell</small></article><article class="panel metric"><span class="eyebrow">FRAMES / S <em>SIMULIERT</em></span><strong id="fps">—</strong><small>Kein physischer CAN-Empfang</small></article><article class="panel metric"><span class="eyebrow">BLE SESSION</span><strong id="sessionTime">00:00</strong><small id="sessionDetail">Wartet auf Verbindung</small></article></div>
-      <div class="lower-grid"><article class="panel controls-panel"><div class="panel-header"><h2>Testfunktionen</h2><span class="tag">Simulation</span></div><div class="control-row"><div><strong>EU Charge Port Type</strong><p>Simuliert die 0x25D-Korrektur. Sendet kein CAN.</p></div><button id="cpToggle" class="switch" role="switch" aria-label="EU Charge Port Type simulieren" aria-checked="false" disabled><i></i></button></div><div class="control-row"><div><strong>Marker setzen</strong><p>Markiert einen Zeitpunkt im lokalen Ereignisprotokoll.</p></div><button class="button secondary" id="markerButton" disabled>MARKER <span>＋</span></button></div></article>
-      <article class="panel log-panel"><div class="panel-header"><h2>Ereignisse</h2><button class="text-button" id="exportLog">Exportieren ↗</button></div><ol id="eventLog" class="event-log" aria-live="polite"></ol></article></div>
-    </section>
-    <section class="view" id="view-connection" hidden><div class="page-heading"><div><p class="eyebrow">LOKAL. OHNE WLAN-HOTSPOT.</p><h1>Verbindung<span>.</span></h1><p class="muted">Dein Browser spricht direkt mit deinem Testboard.</p></div></div><div class="two-columns"><article class="panel padded"><h2>Bluetooth-Verbindung</h2><p>Das Board erscheint als <code>Commander-Lab-XXXX</code>. Es benötigt nur USB-Strom und die beiliegende Testfirmware.</p><button class="button primary" id="connectSettings">Gerät auswählen ↗</button><button class="button secondary" id="reconnectButton" disabled>Erneut verbinden</button><button class="button secondary" id="disconnectButton" disabled>Trennen</button><p class="muted fine">Nach einem Abbruch wird die Verbindung als getrennt angezeigt. Eine Wiederverbindung wird bewusst per Taste gestartet.</p><label class="field-label" for="intervalSelect">Statusintervall</label><select id="intervalSelect" disabled><option value="500">500 ms</option><option value="1000" selected>1 Sekunde</option><option value="2000">2 Sekunden</option></select><p class="muted fine">Wird vom Testboard bestätigt und dort gespeichert.</p></article><article class="panel padded"><span class="eyebrow">BROWSER-CHECK</span><h2 id="browserCheck">Wird geprüft …</h2><p id="browserExplanation"></p><hr><h3>Auf dem iPhone</h3><p>Safari und Chrome bieten dort üblicherweise kein Web Bluetooth. Du kannst diese Webseite im Demo-Modus testen. Für eine echte BLE-Verbindung brauchst du einen passenden BLE-Browser oder später eine eigene App.</p><p class="muted fine">Ein Spezialbrowser ist erst nach einem Test mit dieser Seite als kompatibel anzusehen. Die Installation als PWA ergänzt keine fehlende Bluetooth-Unterstützung.</p></article></div></section>
-    <section class="view" id="view-firmware" hidden><div class="page-heading"><div><p class="eyebrow">UPDATES OHNE USB-KABEL</p><h1>Firmware<span>.</span></h1><p class="muted">BLE-Update für das separate ESP32-Testboard.</p></div></div><article class="panel padded firmware-panel"><div class="panel-header"><h2>Testfirmware aktualisieren</h2><span class="tag">ESP32 · BLE-LAB</span></div><p>Verbinde zuerst das Testboard. Wähle dann die <strong>OTA-Datei aus diesem Testprojekt</strong>. Firmware für die Fahrzeugbox und vollständige Flash-Abbilder gehören nicht hierher.</p><label class="file-picker" for="firmwareFile"><span>↥</span><strong>OTA-Datei auswählen</strong><small id="fileLabel">firmware-ota-commander-ble-lab.bin</small><input id="firmwareFile" type="file" accept=".bin"></label><div class="update-progress"><progress id="otaProgress" max="100" value="0"></progress><div><span id="otaStatus">Wartet auf Datei und BLE-Verbindung</span><span id="otaPercent">0 %</span></div></div><div class="button-row"><button class="button primary" id="uploadButton" disabled>Update übertragen ↗</button><button class="button secondary" id="cancelUpload" disabled>Abbrechen</button></div><p class="muted fine">Übertragung mit bestätigten Datenblöcken und SHA-256-Prüfung auf dem Board. Das Board startet erst nach erfolgreichem Abschluss neu. Tempo abhängig von Browser und BLE-Verbindung.</p></article></section>
-    <section class="view" id="view-guide" hidden><div class="page-heading"><div><p class="eyebrow">IN DREI SCHRITTEN</p><h1>Los geht’s<span>.</span></h1><p class="muted">Zunächst auf dem Schreibtisch. Die Box im Fahrzeug bleibt unverändert.</p></div></div><div class="steps"><article class="panel padded"><span class="step-number">01</span><h2>Webseite hosten</h2><p>Lade das Projekt in ein GitHub-Repository. Aktiviere unter <strong>Settings → Pages → Source</strong> die Option <strong>GitHub Actions</strong>. Der beiliegende Workflow veröffentlicht ausschließlich den Ordner <code>web/</code>.</p></article><article class="panel padded"><span class="step-number">02</span><h2>Testboard flashen</h2><p>Flashe die beiliegende ESP32-Testfirmware einmal per USB auf dein AZDelivery Dev Kit C. Anleitung und fertige Dateien findest du im Projektpaket. Ein CAN-Transceiver wird für diesen Test nicht benötigt.</p></article><article class="panel padded"><span class="step-number">03</span><h2>BLE ausprobieren</h2><p>Öffne die HTTPS-Seite in einem kompatiblen Browser. Tippe auf <strong>Verbinden</strong> und wähle <strong>Commander-Lab-XXXX</strong>. Alle Fahrzeugwerte bleiben auch am echten Testboard simuliert.</p></article></div><article class="panel padded"><h2>Offline verfügbar</h2><p>Nach einem erfolgreichen ersten Laden werden die Seiten-Dateien lokal zwischengespeichert. Öffne dieselbe Adresse erneut, um ohne Internet zu arbeiten. Bluetooth-Unterstützung und Geräteberechtigungen müssen trotzdem im Browser vorhanden sein.</p><p class="muted fine">Keine Konten, keine Analytics, kein Upload von Statusdaten. Der Ereignisexport wird lokal auf deinem Gerät erstellt.</p></article></section>
-    <footer><span>COMMANDER BLE LAB</span><span>Testplattform · Kein Fahrzeug-CAN angeschlossen</span><span id="networkStatus">Online</span></footer>
-  </main>
-</div><div id="toast" class="toast" role="status" hidden></div>
+    </div>
+    <div class="hg">
+      <div><div class="hv" id="bVolt">--</div><div class="hl">Voltage</div></div>
+      <div><div class="hv" id="bCurr">--</div><div class="hl">Current</div></div>
+      <div><div class="hv" id="bTemp">--</div><div class="hl">Temp</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Performance (read-only, opt-in) -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-b">P</div><h2>Performance</h2>
+    <label class="sw" style="margin-left:auto"><input type="checkbox" id="swPerf"><span class="sl2"></span></label>
+  </div>
+  <div id="perfOff" class="log-info" style="margin-bottom:0">
+    Read-only read-out derived from frames already on the bus &mdash; it transmits
+    nothing. Enable to show acceleration / braking timers, an estimated G (no IMU),
+    wheel slip and pack temperature / power. Speed &amp; est. G need any tap
+    carrying 0x257; wheel slip needs Party CAN (0x175); temp &amp; power need a
+    Vehicle-CAN tap (BMS).
+  </div>
+  <div id="perfBody" style="display:none">
+    <div class="row"><span class="lbl">Vehicle speed</span><span id="pfSpeed" style="color:var(--text2)">--</span></div>
+    <div class="sg">
+      <div class="sb"><div class="sv" id="pf050">--</div><div class="sl">0-50 km/h</div><div class="sl" id="pf050b">best --</div></div>
+      <div class="sb"><div class="sv" id="pf060mph">--</div><div class="sl">0-60 mph</div><div class="sl" id="pf060mphb">best --</div></div>
+      <div class="sb"><div class="sv" id="pf0100">--</div><div class="sl">0-100 km/h</div><div class="sl" id="pf0100b">best --</div></div>
+      <div class="sb"><div class="sv" id="pf1000">--</div><div class="sl">100-0 km/h brake</div><div class="sl" id="pf1000b">best --</div></div>
+    </div>
+    <div class="sg">
+      <div class="sb"><div class="sv" id="pfG">--</div><div class="sl">Est. long. G</div><div class="sl" id="pfGpk">peak --</div></div>
+      <div class="sb"><div class="sv" id="pfSlip">--</div><div class="sl">Wheel slip</div></div>
+      <div class="sb"><div class="sv" id="pfPow">--</div><div class="sl">Power</div></div>
+      <div class="sb"><div class="sv" id="pfTemp">--</div><div class="sl">Pack temp</div></div>
+    </div>
+    <div class="row"><span class="lbl">Battery advisory</span><span id="pfAdv" style="font-size:.8em;color:var(--text2)">--</span></div>
+    <div class="log-info" style="margin-top:8px;font-size:.76em">
+      G is estimated from dv/dt of vehicle speed (no IMU). Timers auto-arm leaving a
+      standstill, lock at the target, and reset at the next standstill; best time is
+      kept per session. Temp / power need a Vehicle-CAN tap; wheel slip needs 0x175.
+    </div>
+  </div>
+</div>
+
+<!-- CAN Stats -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-d">C</div><h2>CAN Bus</h2></div>
+  <div class="sg">
+    <div class="sb"><div class="sv" id="rxCnt">0</div><div class="sl">RX Frames</div></div>
+    <div class="sb"><div class="sv" id="txCnt">0</div><div class="sl">TX Frames</div></div>
+    <div class="sb"><div class="sv" id="crcErr">0</div><div class="sl">CAN Errors</div><div class="sl" id="crcSplit">RX&nbsp;missed&nbsp;0 &middot; bus&nbsp;0 &middot; TX&nbsp;fail&nbsp;0</div><div class="sl" id="rxService">RX service starting</div><div class="sl" id="canTiming"></div></div>
+    <div class="sb"><div class="sv" id="fps">0.0</div><div class="sl">Frames/s</div></div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="card controls-section">
+  <div class="card-head"><div class="icon ic-c">C</div><h2>Controls</h2></div>
+  <button id="btnMode" class="btn-main btn-act">Activate</button>
+<details class="controls-fold">
+  <summary><span id="controlsSummary" class="control-summary">BLE-Test · EU CP Type Simulation</span></summary>
+  <div class="controls-body">
+  <div class="row">
+    <span class="lbl">Hardware<br><span class="hint">Auto-detect needs 0x398 &mdash; many Model 3/Y never send it. Pick your car if detection is wrong.</span></span>
+    <select id="selHwOverride">
+      <option value="0">Auto-detect</option>
+      <option value="3">Force HW4</option>
+      <option value="2">Force HW3</option>
+      <option value="1">Force Legacy</option>
+    </select>
+  </div>
+  <div class="row">
+    <span class="lbl">Ignore OTA</span>
+    <label class="sw"><input type="checkbox" id="swIgnoreOta"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">FSD Unlock</span>
+    <label class="sw"><input type="checkbox" id="swFsdUnlock"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">HW3 Speed Override (legacy)<br><small style="color:var(--muted)">Writes the follow-distance profile and Autopilot offset into the FSD speed fields. Off = the car's own FSD offset and profile are left alone.</small></span>
+    <label class="sw"><input type="checkbox" id="swHw3Spd"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">NAG Killer</span>
+    <label class="sw"><input type="checkbox" id="swNag"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Continuous AP</span>
+    <label class="sw"><input type="checkbox" id="swContinuousAp"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">AP-First (14.x)</span>
+    <label class="sw"><input type="checkbox" id="swApFirst"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Instant Engage (exp.)</span>
+    <label class="sw"><input type="checkbox" id="swApFe"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Minimal Inject (exp.)</span>
+    <label class="sw"><input type="checkbox" id="swApMi"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Nag EPAS-faithful (14.x, exp.)</span>
+    <label class="sw"><input type="checkbox" id="swNagF"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Soft Engage (14.x, exp.)</span>
+    <label class="sw"><input type="checkbox" id="swSoft"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Nag Burst (14.x, exp.)</span>
+    <label class="sw"><input type="checkbox" id="swNagB"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Abort Guard (14.x, exp.)</span>
+    <label class="sw"><input type="checkbox" id="swAbrt"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">BMS Display</span>
+    <label class="sw"><input type="checkbox" id="swBms"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Force FSD</span>
+    <label class="sw"><input type="checkbox" id="swFsd"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">China Mode</span>
+    <label class="sw"><input type="checkbox" id="swChina"><span class="sl2"></span></label>
+  </div>
+  <div class="row" id="rowChime">
+    <span class="lbl">Suppress Chime</span>
+    <label class="sw"><input type="checkbox" id="swChime"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Precondition<br><small style="color:var(--muted)">battery preheat trigger (0x082)</small></span>
+    <label class="sw"><input type="checkbox" id="swPrecond"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">EU Region (lights)<br><small style="color:var(--muted)">0x7FF mux1: country=DE + rearLightType=EU_CN; mux2: auxParkLamps=EU; 10 Hz on can1/Vehicle</small></span>
+    <label class="sw"><input type="checkbox" id="swEuReg"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">EU CP Type (continuous)<br><small style="color:var(--muted)">BLE-Test: simuliert EU/US CP Type. Kein CAN-Versand. Die übrigen Fahrzeugschalter benötigen die spätere Commander-BLE-Firmware.</small></span>
+    <label class="sw"><input type="checkbox" id="swCpTypeEU"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Summon EU Unlock</span>
+    <label class="sw"><input type="checkbox" id="swSummon"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Continue on Green<br><small style="color:var(--muted)">pairs with TLSSC</small></span>
+    <label class="sw"><input type="checkbox" id="swCog"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">TLSSC bit38</span>
+    <label class="sw"><input type="checkbox" id="swTlssc38"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Right-Hand Drive (RHD)<br><small style="color:var(--red)">RHD markets only — do NOT enable while driving on the right.</small></span>
+    <label class="sw"><input type="checkbox" id="swRhd"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Telemetry Off (experimental)<br><small style="color:var(--muted)">Experimental &amp; unverified — clears reachable telemetry flags only (not the Vehicle-bus ECU log-upload). Does NOT guarantee reduced detection.</small></span>
+    <label class="sw"><input type="checkbox" id="swTelOff"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">AP Branch/Tier (experimental)<br><small style="color:var(--muted)">Experimental &amp; non-persistent — injects a UI branch/tier hint only, reverts when injection stops; unverified and may be a ban signal. Off by default.</small></span>
+    <select id="selApmv3">
+      <option value="255">Off</option>
+      <option value="0">Live</option>
+      <option value="1">Stage</option>
+      <option value="2">Dev</option>
+      <option value="3">Stage2</option>
+      <option value="4">EAP</option>
+      <option value="5">Demo</option>
+    </select>
+  </div>
+  <div class="row" style="display:block">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span class="lbl">Acceleration Mode (experimental)<br><small style="color:var(--muted)">Rewrites the pedal map on 0x334. The touchscreen keeps showing your own setting; a new mode only switches at standstill.</small></span>
+      <select id="selAccel">
+        <option value="0">Off</option>
+        <option value="1">Chill</option>
+        <option value="2">Sport</option>
+        <option value="3">Performance</option>
+      </select>
+    </div>
+    <div id="accelSt" style="font-size:12px;color:var(--muted);margin-top:4px">--</div>
+  </div>
+  <div class="row" style="display:block">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span class="lbl">Track Mode (experimental)<br><small style="color:var(--muted)">Experimental &mdash; Vehicle-bus; not car-validated. Defaults to rear-biased (rotation 100) + 30% stability &mdash; fun with a safety margin. Raise stability for stock feel.</small></span>
+      <label class="sw"><input type="checkbox" id="swTrkMode"><span class="sl2"></span></label>
+    </div>
+    <div style="margin-top:8px">
+      <label style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span>Handling Balance <small>(stable &rarr; rotation)</small></span><span id="trkRotV">100</span></label>
+      <input type="range" id="trkRot" min="0" max="100" style="width:100%">
+    </div>
+    <div style="margin-top:6px">
+      <label style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span>Stability Assist</span><span id="trkStabV">30</span></label>
+      <input type="range" id="trkStab" min="0" max="100" style="width:100%">
+    </div>
+    <div class="row" style="padding:6px 0 0">
+      <span class="lbl">Post-drive Cooling</span>
+      <label class="sw"><input type="checkbox" id="swTrkPC"><span class="sl2"></span></label>
+    </div>
+    <div class="row" style="padding:0">
+      <span class="lbl">Compressor Overclock<br><small style="color:var(--muted)">max cooling</small></span>
+      <label class="sw"><input type="checkbox" id="swTrkCO"><span class="sl2"></span></label>
+    </div>
+    <div class="row">
+      <span class="lbl">Power Boost / Spicy Tune (experimental)<br><small style="color:var(--muted)">Experimental &amp; unverified — raises the car's own DI/DIR/DIF drivePowerMax limit by a fixed % (raise-only, clamped to SNA 511). BMS untouched. Off by default.</small></span>
+      <select id="selPwrBst">
+        <option value="0">Off</option>
+        <option value="5">+5 %</option>
+        <option value="10">+10 %</option>
+        <option value="15">+15 %</option>
+      </select>
+    </div>
+  </div>
+  <div class="row" style="display:block">
+    <div id="pmSuggest" style="display:none;margin:0 0 8px;padding:8px 10px;border:1px solid var(--accent);border-radius:6px;background:var(--card2)">
+      <div style="font-size:12px;color:var(--text)">Looks like variant <b id="pmName">?</b> &mdash; the standard parser can't read AP-state on this bus.</div>
+      <button type="button" id="pmApply" style="margin-top:6px;background:var(--accent);color:#000;border:0;padding:6px 12px;border-radius:4px;cursor:pointer">Apply this profile</button>
+    </div>
+    <details>
+      <summary class="lbl" style="cursor:pointer">Signal Map (advanced, 14.x)</summary>
+      <div style="font-size:11px;color:var(--muted);margin:6px 0 8px">Override where the nag killer reads AP-state / hands-on / steering. Leave DAS id <b>0</b> for auto-detect. byte 0-7, shift 0-7, mask hex.</div>
+      <div style="display:grid;grid-template-columns:auto auto;gap:6px 10px;align-items:center;font-size:12px">
+        <span>DAS id (0x..)</span><input id="cgDid" placeholder="0">
+        <span>AP-state byte/sh/mask</span><span><input id="cgApB" class="cgn"><input id="cgApS" class="cgn"><input id="cgApM" class="cgn" placeholder="0xF"></span>
+        <span>Hands-on byte/sh/mask</span><span><input id="cgHoB" class="cgn"><input id="cgHoS" class="cgn"><input id="cgHoM" class="cgn" placeholder="0xF"></span>
+        <span>Steer id (0x..)</span><input id="cgSid" placeholder="0">
+        <span>Steer hi/lo byte</span><span><input id="cgSHi" class="cgn"><input id="cgSLo" class="cgn"></span>
+      </div>
+      <button style="margin-top:8px;background:var(--accent);color:#000;border:0;padding:6px 12px;border-radius:4px;cursor:pointer">Save mapping</button>
+    </details>
+  </div>
+
+  <div class="row">
+    <span class="lbl">CAN Dump</span>
+    <label class="sw"><input type="checkbox" id="swDump"><span class="sl2"></span></label>
+  </div>
+
+  <div class="row">
+    <span class="lbl">Deep Sleep (sec)</span>
+    <input type="number" id="numSleep" min="10" max="3600" style="width:60px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;text-align:right">
+  </div>
+
+  </div>
+</details>
+</div>
+
+<!-- Tap capability checker (#125) -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-d">T</div><h2>Tap Check</h2>
+    <span id="capSt" class="pill off" style="margin-left:auto"><span class="pd"></span>Idle</span></div>
+  <div class="log-info" style="margin-bottom:8px">
+    Listens a few seconds and reports whether each feature can work on the bus this
+    device is tapped into. Pure read-only &mdash; nothing is transmitted.
+  </div>
+  <div id="capBody"></div>
+  <button id="capBtn" type="button" class="btn-main btn-blue" style="margin-top:8px">RE-CHECK</button>
+</div>
+
+<!-- Black-box incident recorder (#124) -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-d">R</div><h2>Black-box</h2>
+    <span id="bbBadge" class="pill on" style="display:none;margin-left:auto">NEW</span></div>
+  <div id="bbNote" class="log-info" style="margin-bottom:10px;display:none">
+    Records the key diagnostic CAN IDs around anomalies (aborts, bus-off, manual
+    marks) to the device only &mdash; never uploaded. Use the toggle below to enable or disable.
+    <button type="button" style="margin-left:6px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:2px 8px;border-radius:4px;cursor:pointer">Got it</button>
+  </div>
+  <div class="row">
+    <span class="lbl">Auto-record</span>
+    <label class="sw"><input type="checkbox" id="swBlackbox"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Status</span>
+    <span class="pill off" id="bbSt"><span class="pd"></span>Idle</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Storage</span>
+    <span id="bbStore" style="font-size:.78em;color:var(--text2)">--</span>
+  </div>
+  <div id="bbVolatileWarn" class="log-info" style="display:none;margin:8px 0;color:var(--yellow)">
+    &#9888;&#xFE0F; Volatile storage &mdash; download events before power-off; they are lost on reboot.
+  </div>
+  <button id="bbMark" type="button" class="btn-main btn-blue" style="margin:8px 0">&#9873; MARK NOW</button>
+  <div id="bbList" style="margin-top:4px"></div>
+  <button id="bbDelAll" type="button" class="btn-main btn-stop" style="margin-top:10px;display:none">DELETE ALL EVENTS</button>
+</div>
+
+<!-- Administration -->
+<details class="config-section">
+  <summary><div class="icon ic-c">A</div><div class="card-head" style="margin:0"><h2>Administration</h2></div></summary>
+  <div class="config-body">
+
+<!-- HTTP CAN Log -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-d">L</div><h2>CAN Log</h2></div>
+  <div class="row">
+    <span class="lbl">Stream</span>
+    <span class="pill off" id="httpLogSt"><span class="pd"></span>Idle</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Filter IDs</span>
+    <input id="httpLogFilter" class="log-filter" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="0x370, 0x3FD">
+  </div>
+  <div class="row">
+    <span class="lbl">Buffered</span>
+    <span id="httpLogBuf" style="font-size:.8em;color:var(--text2)">0 frames</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Dropped</span>
+    <span id="httpLogDrop" style="font-size:.8em;color:var(--text2)">0 frames</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Filtered</span>
+    <span id="httpLogFiltered" style="font-size:.8em;color:var(--text2)">0 frames</span>
+  </div>
+  <div id="httpLogInfo" class="log-info">BLE-Ereignisse lokal im Browser. Roh-CAN-Logging wird von dieser Testfirmware noch nicht unterstützt.</div>
+  <div class="log-actions" style="display:flex;gap:8px;margin-top:8px">
+    <button type="button" class="btn-main btn-blue" id="markerButton">MARKER</button>
+  </div>
+  <div class="log-actions">
+    <button id="btnHttpLog" type="button" class="btn-main btn-blue" disabled>STREAM LOG AND SAVE</button>
+  </div>
+</div>
+
+<div class="card"><div class="card-head"><div class="icon ic-d">E</div><h2>BLE Events</h2></div><ol id="eventLog" class="ble-events"></ol><button class="btn-main btn-blue" id="exportLog">EXPORT EVENTS</button></div>
+<!-- WiFi Config -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-c">W</div><h2>WiFi Configuration</h2></div>
+  <div class="log-info" style="margin-bottom:10px">
+    The device starts its own access point by default. Optionally set a network below; when a network name is set, the device tries to connect to it on boot and starts its own access point if it cannot connect.
+  </div>
+  <div class="row">
+    <span class="lbl">Access Point</span>
+    <span style="font-size:.72em;color:var(--text3)">default</span>
+  </div>
+  <div class="row">
+    <span class="lbl">SSID</span>
+    <input type="text" id="wifiSsid" maxlength="32" style="width:140px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;text-align:right">
+  </div>
+  <div class="row">
+    <span class="lbl">Password</span>
+    <input type="password" id="wifiPass" maxlength="64" style="width:140px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;text-align:right">
+  </div>
+  <div class="row">
+    <span class="lbl">Stealth Mode (Hidden)</span>
+    <label class="sw"><input type="checkbox" id="swWifiHid"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Connect to WiFi</span>
+    <span style="font-size:.72em;color:var(--text3)">optional</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Network Name</span>
+    <input type="text" id="wifiStaSsid" maxlength="32" style="width:140px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;text-align:right">
+  </div>
+  <div class="row">
+    <span class="lbl">Network Password</span>
+    <input type="password" id="wifiStaPass" maxlength="64" style="width:140px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;text-align:right">
+  </div>
+  <button class="btn-main btn-stop" style="margin-top:12px">SAVE & RESTART WIFI</button>
+</div>
+
+<!-- OTA Update -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-c">U</div><h2>OTA Firmware Update</h2></div>
+  <div style="font-size:.75em;color:var(--text3);margin-bottom:12px;line-height:1.5">
+    BLE-OTA: ausschließlich die OTA-Datei für dieses ESP32-Testboard auswählen. Start der Übertragung nach Auswahl.
+  </div>
+  <form id="otaForm" enctype="multipart/form-data" style="margin:0">
+    <input type="file" id="otaFile" class="ota-file" accept=".bin">
+    <button type="button" class="btn-main btn-blue" id="otaSelectBtn">
+      SELECT FIRMWARE (.bin)
+    </button>
+  </form><button type="button" class="btn-main btn-stop" id="cancelUpload" disabled>ABORT UPDATE</button>
+  <div id="otaProgress" class="ota-progress">
+    <div class="ota-track"><div id="otaBar" class="ota-bar"></div></div>
+    <div id="otaStatus" class="ota-status">Preparing...</div>
+    <div id="otaBytes" class="ota-bytes"></div>
+  </div>
+  <div id="otaRollbackInfo" class="ota-info">
+    <b style="color:var(--blue)">Partition Safety</b><br>
+    Schreibt in die inaktive App-Partition. SHA-256 und Datenblöcke werden bestätigt. Nach erfolgreichem Abschluss startet das Board neu. Die Testfirmware bestätigt keinen automatischen 15-Sekunden-Rollback.
+  </div>
+</div>
+
+<!-- SD Card -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-d">S</div><h2>SD Card</h2></div>
+  <div class="row">
+    <span class="lbl">Dump Status</span>
+    <span class="pill off" id="dumpSt"><span class="pd"></span>Idle</span>
+  </div>
+  <button id="btnFmt" class="btn-main btn-stop" style="margin-top:8px">FORMAT SD CARD</button>
+  <div id="fmtOut" style="font-size:.75em;color:var(--text2);margin-top:8px;display:none"></div>
+</div>
+
+<!-- Device Info -->
+<div class="card">
+  <div class="card-head"><div class="icon ic-d">D</div><h2>Device</h2></div>
+  <div class="row">
+    <span class="lbl">Firmware</span>
+    <span id="fwBuild" style="font-size:.8em;color:var(--text2)">--</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Uptime</span>
+    <span id="uptime" style="font-variant-numeric:tabular-nums">--</span>
+  </div>
+  <div class="row">
+    <span class="lbl">WiFi Clients</span>
+    <span id="wifiCl">--</span>
+  </div>
+  <div class="row">
+    <span class="lbl">OTA Partition</span>
+    <span id="otaPartInfo" style="font-size:.78em;color:var(--text2)">--</span>
+  </div>
+  <button class="btn-main btn-yellow" style="margin-top:12px">RESTART DEVICE</button>
+</div>
+
+  </div>
+</details>
+
+<div class="foot">Tesla FSD ESP32 · BLE Testboard · WEB 2.0.0</div>
+</div><!-- /wrap -->
+
 <script type="module" src="./app.js"></script>
 </body></html>

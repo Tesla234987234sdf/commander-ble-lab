@@ -1,1 +1,1 @@
-{"id":"./","name":"Commander BLE Lab","short_name":"Commander","lang":"de","start_url":"./","scope":"./","display":"standalone","background_color":"#101512","theme_color":"#111715","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{"id":"./","name":"Tesla FSD · BLE Lab","short_name":"Commander","lang":"de","start_url":"./","scope":"./","display":"standalone","background_color":"#0a0a1a","theme_color":"#0a0a1a","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
