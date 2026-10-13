@@ -53,11 +53,13 @@ export function otaPacket(offset, payload) {
   packet.set(payload, 4); return packet;
 }
 
-export function validateImage(data, maxSize = 4 * 1024 * 1024) {
+export function validateImage(data, maxSize = 4 * 1024 * 1024, chipId = 0, requireApp = false) {
   if (data.length < 32 || data.length > maxSize) throw new Error('Ungültige Firmwaregröße.');
   if (data[0] !== 0xE9) throw new Error('Keine ESP32-Anwendungsfirmware. Bitte die OTA-Datei wählen.');
-  if (new DataView(data.buffer, data.byteOffset, data.byteLength).getUint16(12, true) !== 0)
-    throw new Error('Diese Datei ist nicht für den klassischen ESP32-Testchip.');
+  if (new DataView(data.buffer, data.byteOffset, data.byteLength).getUint16(12, true) !== chipId)
+    throw new Error('Diese Firmware passt nicht zum Chip des verbundenen Boards.');
+  if (requireApp && (data.length < 36 || new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(32, true) !== 0xABCD5432))
+    throw new Error('Bitte eine OTA-Anwendung wählen; ein Full-Flash-Image ist hier ungeeignet.');
 }
 
 export class CommanderBle extends EventTarget {
@@ -122,8 +124,10 @@ export class CommanderBle extends EventTarget {
       this.event.addEventListener('characteristicvaluechanged', this.onNotification);
       await step('Statusbenachrichtigungen aktivieren', () => this.event.startNotifications());
       const hello = await step('Firmware-Antwort abwarten', () => this.request('hello'));
-      if (hello.protocol !== PROTOCOL_VERSION || hello.board !== 'esp32-devkitc-lab' || hello.simulated !== true)
-        throw new Error('Das Gerät verwendet nicht die passende BLE-Lab-Testfirmware.');
+      const lab = hello.board === 'esp32-devkitc-lab' && hello.simulated === true;
+      const can = ['esp32-devkitc-can', 'lilygo-t2can-ble'].includes(hello.board) && hello.simulated === false;
+      if (hello.protocol !== PROTOCOL_VERSION || (!lab && !can))
+        throw new Error('Das Gerät verwendet keine passende Commander-BLE-Firmware.');
       this.info = hello; this.ready = true;
       this.emit('state', { state: 'connected', info: hello, name: this.device.name });
       await this.request('get_status');
@@ -205,7 +209,7 @@ export class CommanderBle extends EventTarget {
     this.uploading = true;
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
-      validateImage(bytes, this.info.max_image);
+      validateImage(bytes, this.info.max_image, this.info.chip_id ?? 0, this.info.simulated === false);
       const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
       signal?.throwIfAborted();
       const result = await this.request('ota_begin', { size: bytes.length, sha256: hash }, 15000);

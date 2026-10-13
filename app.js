@@ -1,10 +1,13 @@
 import { CommanderBle, errorText } from './protocol.js';
+import * as dashboard from './dashboard.js';
 const $ = id => document.getElementById(id);
 const ble = new CommanderBle(), events = [];
 const number = new Intl.NumberFormat('de-DE');
 let mode = 'none', busy = false, cpBusy = false, demoTimer, demoStart = 0;
 let demoCp = false, demoRx = 0, demoTx = 0, demoInterval = 1000, lastStatus;
 let uploadController, waitingWorker, toastTimer;
+let auxBusy = false, logRunning = false, logParts = [], logBytes = 0, downloading = false;
+const realCan = () => mode === 'ble' && ble.ready && ble.info.simulated === false;
 
 // Preserve the original dashboard, but never send its legacy vehicle commands
 // to the bench board. Only the following supported BLE operations are enabled.
@@ -26,6 +29,12 @@ function fail(error) { const text = errorText(error); log(text); toast(text); }
 function pill(id, text, active = false) { $(id).className = `pill ${active ? 'on' : 'off'}`; $(id).textContent = text; }
 function controls() {
   const active = mode === 'demo' || (mode === 'ble' && ble.ready);
+  if (realCan()) {
+    document.querySelectorAll('.controls-fold button,.controls-fold input,.controls-fold select,#capBtn,#swBlackbox,#bbDelAll,#btnHttpLog,#httpLogFilter,[data-ble-action]').forEach(el => { el.disabled = busy || downloading; });
+    for (const id of ['swDump','btnFmt','wifiSsid','wifiPass','swWifiHid','wifiStaSsid','wifiStaPass']) if ($(id)) $(id).disabled = true;
+  } else {
+    document.querySelectorAll('.controls-fold button,.controls-fold input,.controls-fold select,#capBtn,#swBlackbox,#bbDelAll,#btnHttpLog,#httpLogFilter,[data-ble-action]').forEach(el => { el.disabled = true; });
+  }
   $('connectButton').disabled = busy;
   $('disconnectButton').disabled = busy || !ble.ready;
   $('demoButton').disabled = busy || mode === 'demo';
@@ -35,13 +44,20 @@ function controls() {
   $('markerButton').disabled = !active || busy;
   $('intervalSelect').disabled = !active || busy;
   $('exportLog').disabled = false;
-  $('otaSelectBtn').disabled = busy || mode !== 'ble' || !ble.ready;
+  $('otaSelectBtn').disabled = busy || downloading || logRunning || mode !== 'ble' || !ble.ready;
   $('otaFile').disabled = $('otaSelectBtn').disabled;
   $('cancelUpload').disabled = !uploadController;
   $('reloadApp').disabled = busy;
-  $('controlsSummary').textContent = active ? `BLE-Test · CP Type ${$('swCpTypeEU').checked ? 'EU' : 'US'} · Simulation` : 'BLE-Test · nicht verbunden';
+  $('btnMode').disabled = !realCan() || busy || downloading;
+  $('bbMark').disabled = !realCan() || busy || downloading;
+  $('btnHttpLog').textContent = logRunning ? 'STOP COLLECTING' : logBytes ? 'SAVE LOG FILE' : 'STREAM LOG AND SAVE';
+  if(logBytes && !busy) $('btnHttpLog').disabled = false;
+  if(logRunning) $('httpLogFilter').disabled = true;
+  $('bbList').querySelectorAll('button').forEach(el=>{ el.disabled=!realCan()||busy||downloading; });
+  if (!realCan()) $('controlsSummary').textContent = active ? `BLE-Test · CP Type ${$('swCpTypeEU').checked ? 'EU' : 'US'} · Simulation` : 'BLE · nicht verbunden';
 }
 function render(status) {
+  if (realCan() && status.simulated === false) { lastStatus = status; dashboard.render(status); $('fwBuild').textContent = ble.info.firmware; $('intervalSelect').value = String(status.interval_ms); controls(); return; }
   if (status.simulated !== true || !['demo', 'ble'].includes(mode)) return;
   lastStatus = status;
   $('bSoc').textContent = Number(status.battery).toFixed(0);
@@ -59,7 +75,10 @@ function render(status) {
 }
 function reset() {
   lastStatus = null;
-  for (const id of ['bSoc', 'bVolt', 'bCurr', 'bTemp', 'rxCnt', 'txCnt', 'fps', 'pfPow', 'uptime', 'fwBuild']) $(id).textContent = '—';
+  for (const id of ['bSoc', 'bVolt', 'bCurr', 'bTemp', 'rxCnt', 'txCnt', 'crcErr', 'fps', 'pfPow', 'uptime', 'fwBuild', 'crcSplit', 'canTiming', 'rxService']) $(id).textContent = '—';
+  pill('fsdSt', 'Nicht verbunden'); pill('opMode', 'Nicht verbunden'); pill('nagSt', '—'); pill('hwVer', '—');
+  $('btnMode').textContent = 'Activate';
+  $('otaBanner').style.display='none'; $('autoparkBanner').style.display='none';
   $('socBar').style.strokeDashoffset = '326.73'; $('swCpTypeEU').checked = false;
   pill('bmsSt', 'Waiting Frames'); pill('canVeh', 'Kein CAN');
 }
@@ -68,7 +87,7 @@ function showMode() {
   $('dot').className = mode === 'none' ? 'cdot off' : 'cdot';
   $('deviceHost').textContent = mode === 'ble' ? ble.device.name : mode === 'demo' ? 'Browser-Demo' : 'BLE';
   $('deviceName').textContent = mode === 'ble' ? ble.device.name : mode === 'demo' ? 'Browser-Demo · kein Funkverkehr' : 'Commander-Lab · Testboard auswählen';
-  $('fwBuild').textContent = mode === 'ble' ? ble.info.firmware : mode === 'demo' ? 'Browser-Demo 2.0.0' : '—';
+  $('fwBuild').textContent = mode === 'ble' ? ble.info.firmware : mode === 'demo' ? 'Browser-Demo 3.0.0' : '—';
   $('connErr').style.display = 'none'; controls();
 }
 function stopDemo() { clearInterval(demoTimer); if (mode === 'demo') { mode = 'none'; reset(); showMode(); } }
@@ -90,8 +109,8 @@ $('connectButton').onclick = async () => {
 $('disconnectButton').onclick = () => ble.disconnect();
 ble.addEventListener('state', ({ detail }) => {
   if (detail.state === 'connecting') { $('connectionBadge').textContent = detail.stage || 'Verbinden …'; log(`BLE: ${detail.stage || 'Verbindung wird aufgebaut'}`); }
-  if (detail.state === 'connected') { mode = 'ble'; showMode(); log(`Verbunden mit ${detail.name} · Fahrzeugdaten simuliert.`); }
-  if (detail.state === 'disconnected' && mode !== 'demo') { mode = 'none'; reset(); showMode(); }
+  if (detail.state === 'connected') { mode = 'ble'; showMode(); log(`Verbunden mit ${detail.name} · ${realCan() ? `${ble.info.can_count} CAN-Interface(s)` : 'Fahrzeugdaten simuliert'}.`); refreshAux(); }
+  if (detail.state === 'disconnected' && mode !== 'demo') { logRunning = false; mode = 'none'; reset(); showMode(); if(logBytes) $('btnHttpLog').disabled=false; }
 });
 ble.addEventListener('message', ({ detail }) => {
   if (detail.type === 'status') render(detail);
@@ -103,9 +122,10 @@ $('swCpTypeEU').onchange = async e => {
   const enabled = e.target.checked; cpBusy = true; controls();
   try {
     if (mode === 'demo') { demoCp = enabled; demoTick(); }
+    else if (realCan()) await ble.request('control', { cmd: 'cp_type_eu_test', value: enabled });
     else { const result = await ble.request('set_cp', { enabled }); $('swCpTypeEU').checked = result.enabled; }
-    log(`CP-Simulation ${enabled ? 'EU / CCS' : 'US'}`);
-  } catch (error) { $('swCpTypeEU').checked = Boolean(lastStatus?.cp_eu); fail(error); }
+    log(`CP ${realCan() ? 'CAN-Einstellung' : 'Simulation'} ${enabled ? 'EU / CCS' : 'US'}`);
+  } catch (error) { $('swCpTypeEU').checked = Boolean(lastStatus?.cp_type_eu_test ?? lastStatus?.cp_eu); fail(error); }
   finally { cpBusy = false; controls(); }
 };
 $('markerButton').onclick = async () => { try { mode === 'demo' ? log('DEMO-MARKER') : await ble.request('marker'); } catch (error) { fail(error); } };
@@ -123,7 +143,7 @@ $('swPerf').onchange = e => {
 };
 try { $('swPerf').checked = localStorage.getItem('perfShow') === '1'; $('swPerf').onchange({ target: $('swPerf') }); } catch {}
 $('exportLog').onclick = () => {
-  const data = { app: 'Commander BLE Lab Web 2.0.0', simulated_vehicle_data: true, events };
+  const data = { app: 'Commander BLE Web 3.0.0', simulated_vehicle_data: !realCan(), events };
   const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
   const a = document.createElement('a'); a.href = url; a.download = `commander-ble-${Date.now()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
@@ -153,4 +173,51 @@ if (!navigator.bluetooth || !window.isSecureContext) log('Web Bluetooth hier nic
 pill('fsdSt', 'Kein Fahrzeug'); pill('hwVer', 'ESP32-Testboard'); pill('nagSt', 'Nicht verfügbar');
 pill('capSt', 'Kein CAN'); pill('bbSt', 'Nicht verfügbar'); pill('httpLogSt', 'BLE Events');
 $('wifiCl').textContent = 'WLAN aus'; $('btnMode').textContent = 'Activate';
-reset(); showMode(); network(); log('WEB 2.0.0 · HTTP-Oberfläche mit BLE-Transport bereit.');
+reset(); showMode(); network(); log('WEB 3.0.0 · CAN-Dashboard mit BLE-Transport bereit.');
+async function refreshAux() {
+  if (!realCan() || busy || downloading || logRunning || auxBusy) return;
+  auxBusy = true;
+  try { dashboard.auxiliary(await ble.request('get_aux')); controls(); } catch(error) { if(ble.ready) fail(error); }
+  finally { auxBusy=false; }
+}
+function saveFile(data, name) {
+  const url=URL.createObjectURL(new Blob(data,{type:'text/plain;charset=utf-8'}));
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function command(cmd,value) {
+  if(!realCan() || busy) return;
+  busy=true; controls();
+  try { await ble.request('control',{cmd,value}); log(`Bestätigt: ${cmd}`); }
+  catch(error) { fail(error); }
+  finally { busy=false; controls(); await ble.request('get_status').catch(()=>{}); refreshAux(); }
+}
+async function toggleLog() {
+  if(logRunning) {
+    logRunning=false;
+    try { await ble.request('log_stop'); let batch; do { batch=await ble.request('log_read'); logParts.push(batch.data); logBytes+=batch.data.length; } while(batch.data); } catch(error) { fail(error); }
+    $('btnHttpLog').textContent='SAVE LOG FILE'; return;
+  }
+  if(logBytes) { saveFile(logParts,`tesla_can_ble_${Date.now()}.dump`); logParts=[]; logBytes=0; $('btnHttpLog').textContent='STREAM LOG AND SAVE'; controls(); return; }
+  if(!realCan()||busy) return;
+  try {
+    await ble.request('log_start',{ids:$('httpLogFilter').value.trim()}); logRunning=true; logParts=[]; logBytes=0;
+    $('btnHttpLog').textContent='STOP COLLECTING';
+    while(logRunning && realCan()) {
+      const batch=await ble.request('log_read'); logParts.push(batch.data); logBytes+=batch.data.length;
+      $('httpLogInfo').textContent=`BLE: ${number.format(logBytes)} Bytes · ${batch.dropped} Frames verworfen`;
+      if(logBytes>=16*1024*1024) { await toggleLog(); break; }
+      await new Promise(resolve=>setTimeout(resolve,100));
+    }
+  } catch(error) { logRunning=false; fail(error); $('btnHttpLog').textContent='SAVE LOG FILE'; }
+}
+dashboard.configure({ command, list:()=>realCan()?ble.request('blackbox_list'):Promise.resolve([]),
+  restart:async()=>{ try { await ble.request('restart'); log('Neustart bestätigt.'); } catch(e) { fail(e); } }, toggleLog,
+  download:async(name,json)=>{
+    if(downloading||busy||!realCan()) return; downloading=true; controls();
+    try { let offset=0,parts=[]; for(;;) { const page=await ble.request('blackbox_read',{name,json,offset}); if(page.next<offset||(!page.data&&page.next<page.size)) throw Error('Dateidownload unterbrochen.'); parts.push(page.data); offset=page.next; if(offset>=page.size) break; } saveFile(parts,`${name}.${json?'json':'log'}`); }
+    catch(e) { fail(e); } finally { downloading=false; controls(); }
+  }
+});
+dashboard.bind();
+for(const id of ['wifiSsid','btnFmt']) $(id)?.closest('.card')?.setAttribute('hidden','');
+setInterval(refreshAux,5000);

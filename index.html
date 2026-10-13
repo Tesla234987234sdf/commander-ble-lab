@@ -18,7 +18,7 @@
 <div class="hdr">
   <h1>Tesla FSD</h1>
   <div class="sub">ESP32 BLE Testboard &middot; <span id="deviceHost">device.local</span><br>
-    <span class="fwtag" id="fwTag">WEB 2.0.0 · BLE</span>
+    <span class="fwtag" id="fwTag">WEB 3.0.0 · BLE</span>
   </div>
   <div class="cdot off" id="dot"></div>
 </div>
@@ -29,8 +29,8 @@
     <h3>Restart device?</h3>
     <div class="auth-msg">The device will reboot immediately and the web connection will drop briefly.</div>
     <div class="auth-actions">
-      <button type="button" class="btn-main btn-stop">No</button>
-      <button type="button" class="btn-main btn-yellow">Yes</button>
+      <button type="button" class="btn-main btn-stop" data-ble-action="bleAction0">No</button>
+      <button type="button" class="btn-main btn-yellow" data-ble-action="bleAction1">Yes</button>
     </div>
   </div>
 </div>
@@ -41,7 +41,7 @@
   <div class="log-actions"><button class="btn-main btn-blue" id="connectButton">Verbinden</button><button class="btn-main btn-stop" id="disconnectButton">Trennen</button></div>
   <div class="log-actions"><button class="btn-main btn-act" id="demoButton">Demo</button><button class="btn-main btn-yellow" id="stopDemo">Demo beenden</button></div>
   <div class="row"><span class="lbl">Statusintervall</span><select id="intervalSelect"><option value="500">500 ms</option><option value="1000" selected>1000 ms</option><option value="2000">2000 ms</option></select></div>
-  <div class="lab-note">BLE-Testbetrieb · Alle Fahrzeugwerte und CAN-Zähler sind simuliert. Kein Fahrzeug-CAN angeschlossen. Weitere Bedienelemente sind bis zur Firmware-Anbindung deaktiviert.</div>
+  <div class="lab-note">BLE-CAN · Echte Daten mit TC-BLE-Firmware. Die Browser-Demo und alte BLE-Lab-Firmware bleiben als Simulation gekennzeichnet.</div>
   <div id="updateNotice" class="lab-note" hidden>Neue Webversion verfügbar. <button class="test-btn" id="reloadApp">Jetzt laden</button></div>
   <div id="networkStatus" class="log-info"></div>
 </div>
@@ -72,7 +72,7 @@
       AP from the stalk first, then turn on injection. Dismiss if you're on
       pre-14.x firmware.
     </div>
-    <button class="w-dismiss">Dismiss</button>
+    <button class="w-dismiss" data-ble-action="bleAction2">Dismiss</button>
   </div>
 </div>
 
@@ -271,7 +271,7 @@
     <label class="sw"><input type="checkbox" id="swEuReg"><span class="sl2"></span></label>
   </div>
   <div class="row">
-    <span class="lbl">EU CP Type (continuous)<br><small style="color:var(--muted)">BLE-Test: simuliert EU/US CP Type. Kein CAN-Versand. Die übrigen Fahrzeugschalter benötigen die spätere Commander-BLE-Firmware.</small></span>
+    <span class="lbl">EU CP Type (continuous)<br><small style="color:var(--muted)">CP Type EU: verwendet den angeschlossenen Fahrzeug-CAN. Beim Testboard CAN0, beim T-2CAN CAN1.</small></span>
     <label class="sw"><input type="checkbox" id="swCpTypeEU"><span class="sl2"></span></label>
   </div>
   <div class="row">
@@ -364,7 +364,7 @@
         <span>Steer id (0x..)</span><input id="cgSid" placeholder="0">
         <span>Steer hi/lo byte</span><span><input id="cgSHi" class="cgn"><input id="cgSLo" class="cgn"></span>
       </div>
-      <button style="margin-top:8px;background:var(--accent);color:#000;border:0;padding:6px 12px;border-radius:4px;cursor:pointer">Save mapping</button>
+      <button style="margin-top:8px;background:var(--accent);color:#000;border:0;padding:6px 12px;border-radius:4px;cursor:pointer" data-ble-action="bleAction3">Save mapping</button>
     </details>
   </div>
 
@@ -401,7 +401,7 @@
   <div id="bbNote" class="log-info" style="margin-bottom:10px;display:none">
     Records the key diagnostic CAN IDs around anomalies (aborts, bus-off, manual
     marks) to the device only &mdash; never uploaded. Use the toggle below to enable or disable.
-    <button type="button" style="margin-left:6px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:2px 8px;border-radius:4px;cursor:pointer">Got it</button>
+    <button type="button" style="margin-left:6px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:2px 8px;border-radius:4px;cursor:pointer" data-ble-action="bleAction4">Got it</button>
   </div>
   <div class="row">
     <span class="lbl">Auto-record</span>
@@ -451,7 +451,7 @@
     <span class="lbl">Filtered</span>
     <span id="httpLogFiltered" style="font-size:.8em;color:var(--text2)">0 frames</span>
   </div>
-  <div id="httpLogInfo" class="log-info">BLE-Ereignisse lokal im Browser. Roh-CAN-Logging wird von dieser Testfirmware noch nicht unterstützt.</div>
+  <div id="httpLogInfo" class="log-info">CAN-Logging über BLE mit ID-Filter. BLE-Durchsatz begrenzt; verworfene Frames werden angezeigt.</div>
   <div class="log-actions" style="display:flex;gap:8px;margin-top:8px">
     <button type="button" class="btn-main btn-blue" id="markerButton">MARKER</button>
   </div>
@@ -495,7 +495,7 @@
     <span class="lbl">Network Password</span>
     <input type="password" id="wifiStaPass" maxlength="64" style="width:140px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;text-align:right">
   </div>
-  <button class="btn-main btn-stop" style="margin-top:12px">SAVE & RESTART WIFI</button>
+  <button class="btn-main btn-stop" style="margin-top:12px" data-ble-action="bleAction5">SAVE & RESTART WIFI</button>
 </div>
 
 <!-- OTA Update -->
@@ -551,13 +551,13 @@
     <span class="lbl">OTA Partition</span>
     <span id="otaPartInfo" style="font-size:.78em;color:var(--text2)">--</span>
   </div>
-  <button class="btn-main btn-yellow" style="margin-top:12px">RESTART DEVICE</button>
+  <button class="btn-main btn-yellow" style="margin-top:12px" data-ble-action="bleAction6">RESTART DEVICE</button>
 </div>
 
   </div>
 </details>
 
-<div class="foot">Tesla FSD ESP32 · BLE Testboard · WEB 2.0.0</div>
+<div class="foot">Tesla FSD ESP32 · BLE Testboard · WEB 3.0.0</div>
 </div><!-- /wrap -->
 
 <script type="module" src="./app.js"></script>
