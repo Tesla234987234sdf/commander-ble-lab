@@ -15,7 +15,8 @@ export function errorText(error) {
 
 // One decoder per connection. BLE notifications may split any UTF-8 character.
 export class JsonLines {
-  constructor(onValue, onError = () => {}) {
+  constructor(onValue, onError = () => {}, maxBytes = 4096) {
+    this.maxBytes = maxBytes;
     this.onValue = onValue; this.onError = onError; this.reset();
   }
   reset() { this.decoder = new TextDecoder(); this.buffer = ''; }
@@ -28,20 +29,20 @@ export class JsonLines {
       const line = this.buffer.slice(0, end).trim();
       this.buffer = this.buffer.slice(end + 1);
       if (!line) continue;
-      if (line.length > 4096) { this.onError(new Error('BLE-Nachricht zu groß.')); continue; }
+      if (line.length > this.maxBytes) { this.onError(new Error('BLE-Nachricht zu groß.')); continue; }
       try { this.onValue(JSON.parse(line)); }
       catch (error) { this.onError(error); }
     }
-    if (this.buffer.length > 4096) {
+    if (this.buffer.length > this.maxBytes) {
       this.reset(); this.onError(new Error('Unvollständige BLE-Nachricht zu groß.'));
     }
   }
 }
 
-export function encodeCommand(command, size = 20) {
+export function encodeCommand(command, size = 20, maxBytes = 319) {
   if (!Number.isInteger(size) || size < 1) throw new Error('Ungültige Paketgröße.');
   const data = new TextEncoder().encode(JSON.stringify(command) + '\n');
-  if (data.length > 319) throw new Error('Befehl ist zu groß.');
+  if (data.length > maxBytes) throw new Error('Befehl ist zu groß.');
   const chunks = [];
   for (let i = 0; i < data.length; i += size) chunks.push(data.slice(i, i + size));
   return chunks;
@@ -67,7 +68,7 @@ export class CommanderBle extends EventTarget {
     super(); this.device = null; this.ready = false; this.pending = new Map();
     this.sequence = 0; this.queue = Promise.resolve(); this.uploading = false;
     this.connectTimeout = connectTimeout; this.connectAttempt = 0; this.activeConnectAttempt = 0;
-    this.lines = new JsonLines(message => this.receive(message), error => this.emit('protocolerror', error));
+    this.lines = new JsonLines(message => this.receive(message), error => this.emit('protocolerror', error), 32768);
     this.onDisconnect = () => this.lost();
     this.onNotification = event => this.lines.push(event.target.value);
   }
@@ -125,7 +126,7 @@ export class CommanderBle extends EventTarget {
       await step('Statusbenachrichtigungen aktivieren', () => this.event.startNotifications());
       const hello = await step('Firmware-Antwort abwarten', () => this.request('hello'));
       const lab = hello.board === 'esp32-devkitc-lab' && hello.simulated === true;
-      const can = ['esp32-devkitc-can', 'lilygo-t2can-ble'].includes(hello.board) && hello.simulated === false;
+      const can = ['esp32-devkitc-can', 'lilygo-t2can-ble', 'esp32-c6-dual-ble'].includes(hello.board) && hello.simulated === false;
       if (hello.protocol !== PROTOCOL_VERSION || (!lab && !can))
         throw new Error('Das Gerät verwendet keine passende Commander-BLE-Firmware.');
       this.info = hello; this.ready = true;
@@ -182,7 +183,7 @@ export class CommanderBle extends EventTarget {
       }, timeout);
       this.pending.set(id, { resolve, reject, timer });
       const write = (async () => {
-        for (const chunk of encodeCommand({ id, op, ...args })) await this.write(this.command, chunk);
+        for (const chunk of encodeCommand({ id, op, ...args }, 20, this.info?.max_command || 319)) await this.write(this.command, chunk);
       })();
       try { const [, response] = await Promise.all([write, answer]); return response; }
       finally { clearTimeout(timer); this.pending.delete(id); }

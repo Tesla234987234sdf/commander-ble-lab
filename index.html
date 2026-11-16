@@ -17,34 +17,31 @@
 <!-- Header -->
 <div class="hdr">
   <h1>Tesla FSD</h1>
-  <div class="sub">ESP32 BLE Testboard &middot; <span id="deviceHost">device.local</span><br>
-    <span class="fwtag" id="fwTag">WEB 3.0.0 · BLE</span>
+  <div class="sub">ESP32 CAN Controller &middot; <span id="deviceHost">device.local</span><br>
+    <span class="fwtag" id="fwTag">WEB 4.0.0 · BLE</span>
   </div>
-  <div class="cdot off" id="dot"></div>
+  <div class="cdot" id="dot"></div>
 </div>
-<div id="connErr" class="err">Nicht verbunden. Über „Verbinden“ ein Testboard auswählen.</div>
+<div id="connErr" class="err">Connection lost &mdash; retrying&hellip;</div>
 
 <div id="restartConfirmPanel" class="confirm-panel">
   <div class="auth-box">
     <h3>Restart device?</h3>
     <div class="auth-msg">The device will reboot immediately and the web connection will drop briefly.</div>
     <div class="auth-actions">
-      <button type="button" class="btn-main btn-stop" data-ble-action="bleAction0">No</button>
-      <button type="button" class="btn-main btn-yellow" data-ble-action="bleAction1">Yes</button>
+      <button type="button" class="btn-main btn-stop" onclick="cancelRestartConfirm()">No</button>
+      <button type="button" class="btn-main btn-yellow" onclick="confirmRestart()">Yes</button>
     </div>
   </div>
 </div>
 
-<div class="card ble-card">
-  <div class="card-head"><div class="icon ic-b">B</div><h2>Bluetooth</h2><span class="pill off" id="connectionBadge">Nicht verbunden</span></div>
-  <div class="log-info" id="deviceName">Commander-Lab · Testboard auswählen</div>
-  <div class="log-actions"><button class="btn-main btn-blue" id="connectButton">Verbinden</button><button class="btn-main btn-stop" id="disconnectButton">Trennen</button></div>
-  <div class="log-actions"><button class="btn-main btn-act" id="demoButton">Demo</button><button class="btn-main btn-yellow" id="stopDemo">Demo beenden</button></div>
-  <div class="row"><span class="lbl">Statusintervall</span><select id="intervalSelect"><option value="500">500 ms</option><option value="1000" selected>1000 ms</option><option value="2000">2000 ms</option></select></div>
-  <div class="lab-note">BLE-CAN · Echte Daten mit TC-BLE-Firmware. Die Browser-Demo und alte BLE-Lab-Firmware bleiben als Simulation gekennzeichnet.</div>
-  <div id="updateNotice" class="lab-note" hidden>Neue Webversion verfügbar. <button class="test-btn" id="reloadApp">Jetzt laden</button></div>
-  <div id="networkStatus" class="log-info"></div>
-</div>
+<div class="card ble-card"><div class="card-head"><h2>Bluetooth</h2><span class="pill off" id="connectionBadge">Nicht verbunden</span></div>
+<div id="deviceName" class="ble-note">Commander-C6 auswählen</div>
+<div class="log-actions"><button id="connectButton" data-ble-independent class="btn-main btn-blue">Verbinden</button><button id="disconnectButton" data-ble-independent class="btn-main btn-stop" disabled>Trennen</button></div>
+<div class="row"><label for="intervalSelect">Statusintervall</label><select id="intervalSelect"><option value="500">500 ms</option><option value="1000" selected>1000 ms</option><option value="2000">2000 ms</option></select></div>
+<div class="ble-note">Android: Chrome · iPhone: Bluefy. Zuerst die C6-BLE-Firmware 4.0.0 installieren. Die Webseite verbindet sich direkt per Bluetooth mit der Box. <a href="./legacy/">Bisherige BLE-Lab-Oberfläche</a></div>
+<div id="bleError" class="ble-note ble-error" role="status" aria-live="polite"></div>
+<div id="updateNotice" class="ble-note" hidden>Neue Webversion verfügbar. <button id="reloadApp" data-ble-independent>Jetzt laden</button></div></div>
 <!-- OTA Warning -->
 <div id="otaBanner" class="ota">&#9888;&#xFE0F; OTA UPDATE IN PROGRESS &mdash; CAN TX SUSPENDED</div>
 
@@ -72,9 +69,23 @@
       AP from the stalk first, then turn on injection. Dismiss if you're on
       pre-14.x firmware.
     </div>
-    <button class="w-dismiss" data-ble-action="bleAction2">Dismiss</button>
+    <button class="w-dismiss" onclick="cmd('14x_warning',false)">Dismiss</button>
   </div>
 </div>
+
+<section class="card suspension-card" id="suspensionCard">
+<div class="card-head"><div class="icon ic-b">F</div><h2>Fahrwerk</h2><span class="section-badge">TESTVERSION</span></div>
+<p class="section-copy">Aktuelle Höhen und individuelle Rad-Offsets</p><div class="offset-grid">
+<label class="wheel-tile"><span class="wheel-name">Vorne links</span><span class="wheel-height" id="currentFL">— <small>mm</small></span><span class="offset-label">Offset <small>mm</small></span><input id="offsetFL" type="number" min="-40" max="40" step="4" value="0" oninput="updateOffsetPreview()" aria-label="Offset Vorne links"><output id="heightFL">Keine frischen Höhenwerte</output></label>
+<label class="wheel-tile"><span class="wheel-name">Vorne rechts</span><span class="wheel-height" id="currentFR">— <small>mm</small></span><span class="offset-label">Offset <small>mm</small></span><input id="offsetFR" type="number" min="-40" max="40" step="4" value="0" oninput="updateOffsetPreview()" aria-label="Offset Vorne rechts"><output id="heightFR">Keine frischen Höhenwerte</output></label>
+<label class="wheel-tile"><span class="wheel-name">Hinten links</span><span class="wheel-height" id="currentRL">— <small>mm</small></span><span class="offset-label">Offset <small>mm</small></span><input id="offsetRL" type="number" min="-40" max="40" step="4" value="0" oninput="updateOffsetPreview()" aria-label="Offset Hinten links"><output id="heightRL">Keine frischen Höhenwerte</output></label>
+<label class="wheel-tile"><span class="wheel-name">Hinten rechts</span><span class="wheel-height" id="currentRR">— <small>mm</small></span><span class="offset-label">Offset <small>mm</small></span><input id="offsetRR" type="number" min="-40" max="40" step="4" value="0" oninput="updateOffsetPreview()" aria-label="Offset Hinten rechts"><output id="heightRR">Keine frischen Höhenwerte</output></label>
+</div><div class="preview-actions"><button class="susp-btn quiet" onclick="saveOffsetPreview()">Offsets speichern</button><button class="susp-btn quiet" onclick="resetOffsetPreview()">Zurücksetzen</button></div>
+<div class="preview-actions"><button id="offsetSend" class="susp-btn" onclick="sendOffsetTest()">Offsets senden (Test)</button><button id="offsetStop" class="susp-btn quiet" onclick="stopOffsetTest()">Offset-Senden stoppen</button></div>
+<p id="offsetTxStatus" class="section-copy">Offset-Senden aus. Nach Neustart erneut aktivieren.</p>
+<p id="offsetNotice" class="section-copy">Eingabe: -40 bis +40 mm in 4-mm-Schritten. Aktivierung bleibt bei Gangwechseln erhalten. In P bei Stillstand: frische CAN0/0x199-Nachrichten ohne 5-Hz-Drossel bearbeiten; in D/R/N pausieren. Originale bleiben auf dem Bus. Fahrwerkswirkung unbestätigt.</p>
+<div class="height-actions"><button class="susp-btn" id="suspVeryLow" disabled onclick="requestSuspension(1)"><strong>Ultra tief</strong><small>Serienprofil Sehr niedrig</small></button><button class="susp-btn" id="suspLow" disabled onclick="requestSuspension(2)"><strong>Tief</strong><small>Serienprofil Niedrig</small></button></div>
+<button class="susp-btn stance-button" id="suspStance" disabled onclick="toggleStance()"><span>Stance Mode</span><small>Automatik: P sehr tief · D/R tief</small></button><div id="stanceStatus" class="section-copy">Stance-Automatik ist aus.</div><div id="stanceVehicle" class="section-copy">Gang: -- · warte auf CAN-Daten</div><div id="suspStatus" class="susp-feedback" role="status">Warten auf Fahrzeugdaten</div></section>
 
 <!-- FSD Status -->
 <div class="card">
@@ -85,7 +96,7 @@
   </div>
   <div class="row">
     <span class="lbl">Mode</span>
-    <span class="pill off" id="opMode"><span class="pd"></span>Testboard</span>
+    <span class="pill off" id="opMode"><span class="pd"></span>--</span>
   </div>
   <div class="row">
     <span class="lbl">Hardware</span>
@@ -139,7 +150,7 @@
 <!-- Performance (read-only, opt-in) -->
 <div class="card">
   <div class="card-head"><div class="icon ic-b">P</div><h2>Performance</h2>
-    <label class="sw" style="margin-left:auto"><input type="checkbox" id="swPerf"><span class="sl2"></span></label>
+    <label class="sw" style="margin-left:auto"><input type="checkbox" id="swPerf" onchange="perfToggle(this.checked)"><span class="sl2"></span></label>
   </div>
   <div id="perfOff" class="log-info" style="margin-bottom:0">
     Read-only read-out derived from frames already on the bus &mdash; it transmits
@@ -177,21 +188,23 @@
   <div class="sg">
     <div class="sb"><div class="sv" id="rxCnt">0</div><div class="sl">RX Frames</div></div>
     <div class="sb"><div class="sv" id="txCnt">0</div><div class="sl">TX Frames</div></div>
-    <div class="sb"><div class="sv" id="crcErr">0</div><div class="sl">CAN Errors</div><div class="sl" id="crcSplit">RX&nbsp;missed&nbsp;0 &middot; bus&nbsp;0 &middot; TX&nbsp;fail&nbsp;0</div><div class="sl" id="rxService">RX service starting</div><div class="sl" id="canTiming"></div></div>
+    <div class="sb"><div class="sv" id="crcErr">0</div><div class="sl">CAN Errors</div><div class="sl" id="crcSplit">RX&nbsp;missed&nbsp;0 &middot; bus&nbsp;0 &middot; TX&nbsp;fail&nbsp;0</div><div class="sl" id="rxService">RX service starting</div><button class="btn-quiet" onclick="if(ws&amp;&amp;ws.readyState===1)ws.send(JSON.stringify({cmd:'can_counter_reset',value:1}))">Zähleranzeige zurücksetzen</button><div class="sl" id="perBusCounts"></div><div class="sl" id="canTiming"></div></div>
     <div class="sb"><div class="sv" id="fps">0.0</div><div class="sl">Frames/s</div></div>
   </div>
 </div>
 
 <!-- Controls -->
 <div class="card controls-section">
-  <div class="card-head"><div class="icon ic-c">C</div><h2>Controls</h2></div>
-  <button id="btnMode" class="btn-main btn-act">Activate</button>
+  <div class="card-head"><div class="icon ic-c">C</div><h2>Steuerung</h2></div>
+  <button id="btnMode" class="btn-main btn-act" onclick="toggleMode()">Aktivieren</button>
+  <p style="font-size:.75em;color:var(--text2)">Dieser Schalter steuert die allgemeinen Funktionen. Fahrwerksbefehle und Stance funktionieren unabhaengig davon. Deaktiviert ist kein vollstaendiger CAN-Listen-Only-Modus.</p>
 <details class="controls-fold">
-  <summary><span id="controlsSummary" class="control-summary">BLE-Test · EU CP Type Simulation</span></summary>
+  <summary><span class="controls-title">Funktionen &amp; Einstellungen</span><span id="controlsSummary" class="control-summary">...</span></summary>
   <div class="controls-body">
+  <h3 class="control-group-title">Gerät &amp; Betriebsart</h3>
   <div class="row">
     <span class="lbl">Hardware<br><span class="hint">Auto-detect needs 0x398 &mdash; many Model 3/Y never send it. Pick your car if detection is wrong.</span></span>
-    <select id="selHwOverride">
+    <select id="selHwOverride" onchange="cmd('hw_override',parseInt(this.value,10))">
       <option value="0">Auto-detect</option>
       <option value="3">Force HW4</option>
       <option value="2">Force HW3</option>
@@ -200,103 +213,113 @@
   </div>
   <div class="row">
     <span class="lbl">Ignore OTA</span>
-    <label class="sw"><input type="checkbox" id="swIgnoreOta"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swIgnoreOta" onchange="cmd('ignore_ota',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">FSD Unlock</span>
-    <label class="sw"><input type="checkbox" id="swFsdUnlock"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swFsdUnlock" onchange="cmd('fsd_unlock',this.checked)"><span class="sl2"></span></label>
   </div>
+  <h3 class="control-group-title">Fahrassistenz</h3>
   <div class="row">
     <span class="lbl">HW3 Speed Override (legacy)<br><small style="color:var(--muted)">Writes the follow-distance profile and Autopilot offset into the FSD speed fields. Off = the car's own FSD offset and profile are left alone.</small></span>
-    <label class="sw"><input type="checkbox" id="swHw3Spd"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swHw3Spd" onchange="cmd('hw3_speed_override',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">NAG Killer</span>
-    <label class="sw"><input type="checkbox" id="swNag"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swNag" onchange="cmd('nag',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Continuous AP</span>
-    <label class="sw"><input type="checkbox" id="swContinuousAp"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swContinuousAp" onchange="cmd('continuous_ap',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">AP-First (14.x)</span>
-    <label class="sw"><input type="checkbox" id="swApFirst"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swApFirst" onchange="cmd('ap_first',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Instant Engage (exp.)</span>
-    <label class="sw"><input type="checkbox" id="swApFe"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swApFe" onchange="cmd('ap_first_edge',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Minimal Inject (exp.)</span>
-    <label class="sw"><input type="checkbox" id="swApMi"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swApMi" onchange="cmd('ap_first_minimal',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Nag EPAS-faithful (14.x, exp.)</span>
-    <label class="sw"><input type="checkbox" id="swNagF"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swNagF" onchange="cmd('nag_faithful',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Soft Engage (14.x, exp.)</span>
-    <label class="sw"><input type="checkbox" id="swSoft"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swSoft" onchange="cmd('soft_engage',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Nag Burst (14.x, exp.)</span>
-    <label class="sw"><input type="checkbox" id="swNagB"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swNagB" onchange="cmd('nag_burst',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Abort Guard (14.x, exp.)</span>
-    <label class="sw"><input type="checkbox" id="swAbrt"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swAbrt" onchange="cmd('abort_guard',this.checked)"><span class="sl2"></span></label>
   </div>
+  <h3 class="control-group-title">Komfort &amp; Laden</h3>
   <div class="row">
     <span class="lbl">BMS Display</span>
-    <label class="sw"><input type="checkbox" id="swBms"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swBms" onchange="cmd('bms',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Force FSD</span>
-    <label class="sw"><input type="checkbox" id="swFsd"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swFsd" onchange="cmd('force_fsd',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">China Mode</span>
-    <label class="sw"><input type="checkbox" id="swChina"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swChina" onchange="cmd('china_mode',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row" id="rowChime">
     <span class="lbl">Suppress Chime</span>
-    <label class="sw"><input type="checkbox" id="swChime"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swChime" onchange="cmd('suppress_speed_chime',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Precondition<br><small style="color:var(--muted)">battery preheat trigger (0x082)</small></span>
-    <label class="sw"><input type="checkbox" id="swPrecond"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swPrecond" onchange="cmd('precondition',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
-    <span class="lbl">EU Region (lights)<br><small style="color:var(--muted)">0x7FF mux1: country=DE + rearLightType=EU_CN; mux2: auxParkLamps=EU; 10 Hz on can1/Vehicle</small></span>
-    <label class="sw"><input type="checkbox" id="swEuReg"><span class="sl2"></span></label>
+    <span class="lbl">EU Region (lights)<br><small style="color:var(--muted)">0x7FF mux1/mux2, 10 Hz. Kanal: <span id="euLightDetected">wartet auf Frames</span></small></span>
+    <label class="sw"><input type="checkbox" id="swEuReg" onchange="cmd('gtw_eu_region',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
-    <span class="lbl">EU CP Type (continuous)<br><small style="color:var(--muted)">CP Type EU: verwendet den angeschlossenen Fahrzeug-CAN. Beim Testboard CAN0, beim T-2CAN CAN1.</small></span>
-    <label class="sw"><input type="checkbox" id="swCpTypeEU"><span class="sl2"></span></label>
+    <span class="lbl">EU CP Type (continuous)<br><small style="color:var(--muted)">Experimental: each US 0x25D (8 bytes) triggers an IEC_CCS copy on the selected CAN channel. Requires Active. May resume during charging.</small></span>
+    <label class="sw"><input type="checkbox" id="swCpTypeEU" onchange="cmd('cp_type_eu_test',this.checked)"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <label class="lbl" for="selCpTypeBus">CP Type CAN channel<br><small style="color:var(--muted)">Kanal: <span id="cpBusDetected">wartet auf Frames</span></small></label>
+    <select id="selCpTypeBus" onchange="cmd('cp_type_bus',Number(this.value))">
+      <option value="2" selected>Auto</option>
+      <option value="1">can1</option>
+      <option value="0">can0</option>
+    </select>
   </div>
   <div class="row">
     <span class="lbl">Summon EU Unlock</span>
-    <label class="sw"><input type="checkbox" id="swSummon"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swSummon" onchange="cmd('summon_unlock',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Continue on Green<br><small style="color:var(--muted)">pairs with TLSSC</small></span>
-    <label class="sw"><input type="checkbox" id="swCog"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swCog" onchange="cmd('continue_on_green',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">TLSSC bit38</span>
-    <label class="sw"><input type="checkbox" id="swTlssc38"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swTlssc38" onchange="cmd('assist_tlssc_bit38',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Right-Hand Drive (RHD)<br><small style="color:var(--red)">RHD markets only — do NOT enable while driving on the right.</small></span>
-    <label class="sw"><input type="checkbox" id="swRhd"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swRhd" onchange="cmd('assist_rhd_override',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Telemetry Off (experimental)<br><small style="color:var(--muted)">Experimental &amp; unverified — clears reachable telemetry flags only (not the Vehicle-bus ECU log-upload). Does NOT guarantee reduced detection.</small></span>
-    <label class="sw"><input type="checkbox" id="swTelOff"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swTelOff" onchange="cmd('assist_telemetry_off',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">AP Branch/Tier (experimental)<br><small style="color:var(--muted)">Experimental &amp; non-persistent — injects a UI branch/tier hint only, reverts when injection stops; unverified and may be a ban signal. Off by default.</small></span>
-    <select id="selApmv3">
+    <select id="selApmv3" onchange="cmd('apmv3_branch',parseInt(this.value,10))">
       <option value="255">Off</option>
       <option value="0">Live</option>
       <option value="1">Stage</option>
@@ -306,10 +329,11 @@
       <option value="5">Demo</option>
     </select>
   </div>
+  <h3 class="control-group-title">Fahrdynamik</h3>
   <div class="row" style="display:block">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <span class="lbl">Acceleration Mode (experimental)<br><small style="color:var(--muted)">Rewrites the pedal map on 0x334. The touchscreen keeps showing your own setting; a new mode only switches at standstill.</small></span>
-      <select id="selAccel">
+      <select id="selAccel" onchange="cmd('accel_mode',parseInt(this.value,10))">
         <option value="0">Off</option>
         <option value="1">Chill</option>
         <option value="2">Sport</option>
@@ -321,38 +345,34 @@
   <div class="row" style="display:block">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <span class="lbl">Track Mode (experimental)<br><small style="color:var(--muted)">Experimental &mdash; Vehicle-bus; not car-validated. Defaults to rear-biased (rotation 100) + 30% stability &mdash; fun with a safety margin. Raise stability for stock feel.</small></span>
-      <label class="sw"><input type="checkbox" id="swTrkMode"><span class="sl2"></span></label>
+      <label class="sw"><input type="checkbox" id="swTrkMode" onchange="cmd('track_mode_inject',this.checked)"><span class="sl2"></span></label>
     </div>
     <div style="margin-top:8px">
       <label style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span>Handling Balance <small>(stable &rarr; rotation)</small></span><span id="trkRotV">100</span></label>
-      <input type="range" id="trkRot" min="0" max="100" style="width:100%">
+      <input type="range" id="trkRot" min="0" max="100" style="width:100%" oninput="document.getElementById('trkRotV').textContent=this.value" onchange="cmd('track_rotation_pct',parseInt(this.value,10))">
     </div>
     <div style="margin-top:6px">
       <label style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span>Stability Assist</span><span id="trkStabV">30</span></label>
-      <input type="range" id="trkStab" min="0" max="100" style="width:100%">
+      <input type="range" id="trkStab" min="0" max="100" style="width:100%" oninput="document.getElementById('trkStabV').textContent=this.value" onchange="cmd('track_stability_pct',parseInt(this.value,10))">
     </div>
     <div class="row" style="padding:6px 0 0">
       <span class="lbl">Post-drive Cooling</span>
-      <label class="sw"><input type="checkbox" id="swTrkPC"><span class="sl2"></span></label>
+      <label class="sw"><input type="checkbox" id="swTrkPC" onchange="cmd('track_post_cooling',this.checked)"><span class="sl2"></span></label>
     </div>
     <div class="row" style="padding:0">
       <span class="lbl">Compressor Overclock<br><small style="color:var(--muted)">max cooling</small></span>
-      <label class="sw"><input type="checkbox" id="swTrkCO"><span class="sl2"></span></label>
+      <label class="sw"><input type="checkbox" id="swTrkCO" onchange="cmd('track_cmp_overclock',this.checked)"><span class="sl2"></span></label>
     </div>
     <div class="row">
-      <span class="lbl">Power Boost / Spicy Tune (experimental)<br><small style="color:var(--muted)">Experimental &amp; unverified — raises the car's own DI/DIR/DIF drivePowerMax limit by a fixed % (raise-only, clamped to SNA 511). BMS untouched. Off by default.</small></span>
-      <select id="selPwrBst">
-        <option value="0">Off</option>
-        <option value="5">+5 %</option>
-        <option value="10">+10 %</option>
-        <option value="15">+15 %</option>
-      </select>
+      <span class="lbl">Spicy Tune – Leistungsdiagnose<br><small style="color:var(--muted)">Model S Plaid: Leistungs- und Drehmomentdaten aufzeichnen. Leistungssteigerung ist in dieser Diagnoseversion gesperrt.</small></span>
+      <select id="selPwrBst" disabled><option value="0">Diagnose / kein Boost</option></select>
     </div>
   </div>
+  <h3 class="control-group-title">Erweitert &amp; Diagnose</h3>
   <div class="row" style="display:block">
     <div id="pmSuggest" style="display:none;margin:0 0 8px;padding:8px 10px;border:1px solid var(--accent);border-radius:6px;background:var(--card2)">
       <div style="font-size:12px;color:var(--text)">Looks like variant <b id="pmName">?</b> &mdash; the standard parser can't read AP-state on this bus.</div>
-      <button type="button" id="pmApply" style="margin-top:6px;background:var(--accent);color:#000;border:0;padding:6px 12px;border-radius:4px;cursor:pointer">Apply this profile</button>
+      <button type="button" id="pmApply" onclick="pmApply()" style="margin-top:6px;background:var(--accent);color:#000;border:0;padding:6px 12px;border-radius:4px;cursor:pointer">Apply this profile</button>
     </div>
     <details>
       <summary class="lbl" style="cursor:pointer">Signal Map (advanced, 14.x)</summary>
@@ -364,18 +384,13 @@
         <span>Steer id (0x..)</span><input id="cgSid" placeholder="0">
         <span>Steer hi/lo byte</span><span><input id="cgSHi" class="cgn"><input id="cgSLo" class="cgn"></span>
       </div>
-      <button style="margin-top:8px;background:var(--accent);color:#000;border:0;padding:6px 12px;border-radius:4px;cursor:pointer" data-ble-action="bleAction3">Save mapping</button>
+      <button onclick="saveSigCfg()" style="margin-top:8px;background:var(--accent);color:#000;border:0;padding:6px 12px;border-radius:4px;cursor:pointer">Save mapping</button>
     </details>
   </div>
 
   <div class="row">
     <span class="lbl">CAN Dump</span>
-    <label class="sw"><input type="checkbox" id="swDump"><span class="sl2"></span></label>
-  </div>
-
-  <div class="row">
-    <span class="lbl">Deep Sleep (sec)</span>
-    <input type="number" id="numSleep" min="10" max="3600" style="width:60px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;text-align:right">
+    <label class="sw"><input type="checkbox" id="swDump" onchange="cmd('dump',this.checked)"><span class="sl2"></span></label>
   </div>
 
   </div>
@@ -391,8 +406,13 @@
     device is tapped into. Pure read-only &mdash; nothing is transmitted.
   </div>
   <div id="capBody"></div>
-  <button id="capBtn" type="button" class="btn-main btn-blue" style="margin-top:8px">RE-CHECK</button>
+  <button id="capBtn" type="button" class="btn-main btn-blue" onclick="cmd('capability_recheck',true)" style="margin-top:8px">RE-CHECK</button>
 </div>
+
+<!-- Administration -->
+<details class="config-section" id="adminSection">
+  <summary><div class="icon ic-c">A</div><div class="card-head" style="margin:0"><h2>Administration</h2></div></summary>
+  <div class="config-body">
 
 <!-- Black-box incident recorder (#124) -->
 <div class="card">
@@ -401,11 +421,11 @@
   <div id="bbNote" class="log-info" style="margin-bottom:10px;display:none">
     Records the key diagnostic CAN IDs around anomalies (aborts, bus-off, manual
     marks) to the device only &mdash; never uploaded. Use the toggle below to enable or disable.
-    <button type="button" style="margin-left:6px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:2px 8px;border-radius:4px;cursor:pointer" data-ble-action="bleAction4">Got it</button>
+    <button type="button" onclick="bbDismiss()" style="margin-left:6px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:2px 8px;border-radius:4px;cursor:pointer">Got it</button>
   </div>
   <div class="row">
     <span class="lbl">Auto-record</span>
-    <label class="sw"><input type="checkbox" id="swBlackbox"><span class="sl2"></span></label>
+    <label class="sw"><input type="checkbox" id="swBlackbox" onchange="cmd('blackbox_enable',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Status</span>
@@ -418,26 +438,17 @@
   <div id="bbVolatileWarn" class="log-info" style="display:none;margin:8px 0;color:var(--yellow)">
     &#9888;&#xFE0F; Volatile storage &mdash; download events before power-off; they are lost on reboot.
   </div>
-  <button id="bbMark" type="button" class="btn-main btn-blue" style="margin:8px 0">&#9873; MARK NOW</button>
+  <button id="bbMark" type="button" class="btn-main btn-blue" onclick="cmd('blackbox_mark',true)" style="margin:8px 0">&#9873; MARK NOW</button>
   <div id="bbList" style="margin-top:4px"></div>
-  <button id="bbDelAll" type="button" class="btn-main btn-stop" style="margin-top:10px;display:none">DELETE ALL EVENTS</button>
+  <button id="bbDelAll" type="button" class="btn-main btn-stop" onclick="bbDeleteAll()" style="margin-top:10px;display:none">DELETE ALL EVENTS</button>
 </div>
-
-<!-- Administration -->
-<details class="config-section">
-  <summary><div class="icon ic-c">A</div><div class="card-head" style="margin:0"><h2>Administration</h2></div></summary>
-  <div class="config-body">
 
 <!-- HTTP CAN Log -->
 <div class="card">
-  <div class="card-head"><div class="icon ic-d">L</div><h2>CAN Log</h2></div>
+  <div class="card-head"><div class="icon ic-d">L</div><h2>BLE CAN Log</h2></div>
   <div class="row">
     <span class="lbl">Stream</span>
     <span class="pill off" id="httpLogSt"><span class="pd"></span>Idle</span>
-  </div>
-  <div class="row">
-    <span class="lbl">Filter IDs</span>
-    <input id="httpLogFilter" class="log-filter" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="0x370, 0x3FD">
   </div>
   <div class="row">
     <span class="lbl">Buffered</span>
@@ -447,20 +458,13 @@
     <span class="lbl">Dropped</span>
     <span id="httpLogDrop" style="font-size:.8em;color:var(--text2)">0 frames</span>
   </div>
-  <div class="row">
-    <span class="lbl">Filtered</span>
-    <span id="httpLogFiltered" style="font-size:.8em;color:var(--text2)">0 frames</span>
-  </div>
-  <div id="httpLogInfo" class="log-info">CAN-Logging über BLE mit ID-Filter. BLE-Durchsatz begrenzt; verworfene Frames werden angezeigt.</div>
-  <div class="log-actions" style="display:flex;gap:8px;margin-top:8px">
-    <button type="button" class="btn-main btn-blue" id="markerButton">MARKER</button>
-  </div>
+  <div id="httpLogInfo" class="log-info">Alle CAN-IDs auf beiden Bussen.</div>
+  <a id="httpLogDownload" class="log-info" style="color:var(--accent)" hidden></a>
   <div class="log-actions">
-    <button id="btnHttpLog" type="button" class="btn-main btn-blue" disabled>STREAM LOG AND SAVE</button>
+    <button id="btnHttpLog" type="button" class="btn-main btn-blue" onclick="toggleHttpLog()">Start Logging</button>
   </div>
 </div>
 
-<div class="card"><div class="card-head"><div class="icon ic-d">E</div><h2>BLE Events</h2></div><ol id="eventLog" class="ble-events"></ol><button class="btn-main btn-blue" id="exportLog">EXPORT EVENTS</button></div>
 <!-- WiFi Config -->
 <div class="card">
   <div class="card-head"><div class="icon ic-c">W</div><h2>WiFi Configuration</h2></div>
@@ -495,21 +499,21 @@
     <span class="lbl">Network Password</span>
     <input type="password" id="wifiStaPass" maxlength="64" style="width:140px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;text-align:right">
   </div>
-  <button class="btn-main btn-stop" style="margin-top:12px" data-ble-action="bleAction5">SAVE & RESTART WIFI</button>
+  <button class="btn-main btn-stop" onclick="saveWifi()" style="margin-top:12px">SAVE & RESTART WIFI</button>
 </div>
 
 <!-- OTA Update -->
 <div class="card">
   <div class="card-head"><div class="icon ic-c">U</div><h2>OTA Firmware Update</h2></div>
   <div style="font-size:.75em;color:var(--text3);margin-bottom:12px;line-height:1.5">
-    BLE-OTA: ausschließlich die OTA-Datei für dieses ESP32-Testboard auswählen. Start der Übertragung nach Auswahl.
+    Upload a .bin firmware file. Device will reboot after a successful update.
   </div>
   <form id="otaForm" enctype="multipart/form-data" style="margin:0">
-    <input type="file" id="otaFile" class="ota-file" accept=".bin">
-    <button type="button" class="btn-main btn-blue" id="otaSelectBtn">
+    <input type="file" id="otaFile" class="ota-file" accept=".bin" onchange="uploadFirmware()">
+    <button type="button" class="btn-main btn-blue" id="otaSelectBtn" onclick="selectFirmware(this)">
       SELECT FIRMWARE (.bin)
     </button>
-  </form><button type="button" class="btn-main btn-stop" id="cancelUpload" disabled>ABORT UPDATE</button>
+  </form><button type="button" id="cancelUpload" class="btn-main btn-stop" disabled>Update abbrechen</button>
   <div id="otaProgress" class="ota-progress">
     <div class="ota-track"><div id="otaBar" class="ota-bar"></div></div>
     <div id="otaStatus" class="ota-status">Preparing...</div>
@@ -517,7 +521,7 @@
   </div>
   <div id="otaRollbackInfo" class="ota-info">
     <b style="color:var(--blue)">Partition Safety</b><br>
-    Schreibt in die inaktive App-Partition. SHA-256 und Datenblöcke werden bestätigt. Nach erfolgreichem Abschluss startet das Board neu. Die Testfirmware bestätigt keinen automatischen 15-Sekunden-Rollback.
+    OTA writes to the next app partition when available. The new image is kept only after 15 s of runtime; a crash or power cut before that restores the previous firmware. Keep USB reflashing available as a recovery path.
   </div>
 </div>
 
@@ -528,7 +532,7 @@
     <span class="lbl">Dump Status</span>
     <span class="pill off" id="dumpSt"><span class="pd"></span>Idle</span>
   </div>
-  <button id="btnFmt" class="btn-main btn-stop" style="margin-top:8px">FORMAT SD CARD</button>
+  <button id="btnFmt" title="Der C6 besitzt keine SD-Karte" class="btn-main btn-stop" onclick="sdFormat()" style="margin-top:8px">FORMAT SD CARD</button>
   <div id="fmtOut" style="font-size:.75em;color:var(--text2);margin-top:8px;display:none"></div>
 </div>
 
@@ -551,14 +555,16 @@
     <span class="lbl">OTA Partition</span>
     <span id="otaPartInfo" style="font-size:.78em;color:var(--text2)">--</span>
   </div>
-  <button class="btn-main btn-yellow" style="margin-top:12px" data-ble-action="bleAction6">RESTART DEVICE</button>
+  <button class="btn-main btn-yellow" onclick="restartDevice(this)" style="margin-top:12px">RESTART DEVICE</button>
 </div>
 
   </div>
 </details>
 
-<div class="foot">Tesla FSD ESP32 · BLE Testboard · WEB 3.0.0</div>
+<div class="foot">Tesla FSD ESP32 &middot;
+ M5Stack ATOM Lite + ATOMIC CAN Base</div>
 </div><!-- /wrap -->
 
-<script type="module" src="./app.js"></script>
-</body></html>
+<script src="./dashboard.js"></script><script type="module" src="./app.js"></script>
+</body>
+</html>

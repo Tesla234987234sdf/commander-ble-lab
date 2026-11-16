@@ -1,5 +1,5 @@
-const CACHE = 'commander-ble-lab-v3.0.0';
-const SHELL = ['./', './index.html', './styles.css', './app.js', './protocol.js', './dashboard.js', './icon.svg', './manifest.webmanifest'];
+const CACHE = 'commander-ble-lab-v4.0.0';
+const SHELL = ['./', './index.html', './styles.css', './app.js', './protocol.js', './dashboard.js', './command-names.json', './icon.svg', './manifest.webmanifest'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache =>
   cache.addAll(SHELL.map(url => new Request(url, { cache: 'reload' }))))));
 self.addEventListener('activate', event => event.waitUntil((async () => {
@@ -9,6 +9,7 @@ self.addEventListener('activate', event => event.waitUntil((async () => {
 self.addEventListener('message', event => { if (event.data?.type === 'SKIP_WAITING') self.skipWaiting(); });
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+  if(url.pathname.includes('/legacy/'))return;
   if (event.request.method !== 'GET' || url.origin !== self.location.origin || !url.href.startsWith(self.registration.scope)) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);

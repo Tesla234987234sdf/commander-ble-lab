@@ -1,11 +1,21 @@
 
 var ws,rt,busy=0,wifiOnce=false,restartAnchor=null;
+var httpLogGeneration=0;
 var httpLogAbort=null,httpLogReader=null,httpLogParts=[],httpLogBytes=0,httpLogStarted=0,httpLogRunning=false;
-var httpLogName='',httpLogReady=false,httpLogSaveUrl='';
-var httpLogAllowed=true;
+var httpLogSaveUrl='';
 var HW=['Unknown','Legacy','HW3','HW4'];
 var CIRC=326.73;
 document.getElementById('deviceHost').textContent=location.host||location.hostname||'192.168.4.1';
+
+function initWifi(d){
+  if(wifiOnce)return;
+  wifiOnce=true;
+  document.getElementById('wifiSsid').value=d.wifi_ssid||'';
+  document.getElementById('wifiPass').value=d.wifi_pass||'';
+  document.getElementById('swWifiHid').checked=!!d.wifi_hidden;
+  document.getElementById('wifiStaSsid').value=d.wifi_sta_ssid||'';
+  document.getElementById('wifiStaPass').value=d.wifi_sta_pass||'';
+}
 
 function fmt(s){
   var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;
@@ -65,6 +75,7 @@ function renderPerf(d){
   if(d.bms&&d.bms.seen){
     setTxt('pfPow',(d.bms.voltage*d.bms.current/1000).toFixed(1)+' kW');
     var tmax=d.bms.temp_max,tmin=d.bms.temp_min;
+    if(!Number.isFinite(tmax)||!Number.isFinite(tmin)){setTxt('pfTemp','--');setTxt('pfAdv','Temperatur unbekannt');return;}
     var te=document.getElementById('pfTemp');
     if(te){
       te.textContent=tmin+'~'+tmax+'°C';
@@ -124,15 +135,35 @@ function bbSeen(){bbNew=false;var bd=document.getElementById('bbBadge');if(bd)bd
 function bbSync(d){
   var b=d.blackbox;if(!b)return;
   var sw=document.getElementById('swBlackbox');if(sw&&sw!==document.activeElement)sw.checked=!!b.enabled;
-  pill('bbSt',b.enabled,b.armed?'Capturing':(b.enabled?'Armed':'Off'));
+  pill('bbSt',b.enabled,b.save_lowmem?'Speicherfehler':b.queued?'Ereignis vorgemerkt':b.armed?'Capturing':(b.enabled?'Armed':'Off'));
   var st=document.getElementById('bbStore');
-  if(st)st.textContent=(b.backend||'?')+' · '+(b.psram?'PSRAM':'internal')+' · '+((b.cap||0).toLocaleString())+' frames · '+(b.events||0)+' saved';
+  if(st)st.textContent=(b.backend||'?')+' · '+(b.psram?'PSRAM':'internal')+' · '+((b.cap||0).toLocaleString())+' frames · '+(b.events||0)+' saved · verworfene Trigger '+(b.missed||0)+(b.save_lowmem?' · Speichern wegen Speichermangel fehlgeschlagen':'');
   var vw=document.getElementById('bbVolatileWarn');if(vw)vw.style.display=b.volatile?'block':'none';
   var note=document.getElementById('bbNote');if(note)note.style.display=bbNoteDismissed?'none':'block';
   var da=document.getElementById('bbDelAll');if(da)da.style.display=(b.events>0)?'block':'none';
   if(bbCaptures<0){bbCaptures=b.captures;bbRefreshList();}
   else if(b.captures!==bbCaptures){bbCaptures=b.captures;bbNew=true;bbRefreshList();}
   var bd=document.getElementById('bbBadge');if(bd)bd.style.display=bbNew?'inline-block':'none';
+}
+function bbRefreshList(){
+  fetch('/blackbox/list').then(function(r){return r.json()}).then(function(a){
+    var el=document.getElementById('bbList');if(!el)return;
+    if(!a||!a.length){el.innerHTML='<div style="font-size:.78em;color:var(--text3);padding:6px 0">No events recorded yet.</div>';return;}
+    a.sort(function(x,y){return (y.name||'').localeCompare(x.name||'')});
+    var h='';
+    a.forEach(function(ev){
+      var s=ev.summary||{},nm=encodeURIComponent(ev.name);
+      h+='<div style="border-top:1px solid var(--border);padding:8px 0">';
+      h+='<div style="font-size:.8em;color:var(--text);font-family:monospace">'+bbEsc(s.detail||s.trigger||'event')+'</div>';
+      h+='<div style="font-size:.72em;color:var(--text3);margin:2px 0">'+bbEsc(s.hw||'')+' · '+(s.frames||0)+' frames · '+bbEsc((s.buses&&s.buses.dual_can)?'dual-CAN':'single')+'</div>';
+      h+='<div style="display:flex;gap:6px;margin-top:4px">';
+      h+='<a class="btn-main btn-blue" style="padding:4px 10px;font-size:.7em;flex:0" href="/blackbox/get?name='+nm+'&type=log" onclick="bbSeen()">.log</a>';
+      h+='<a class="btn-main btn-blue" style="padding:4px 10px;font-size:.7em;flex:0" href="/blackbox/get?name='+nm+'&type=json" onclick="bbSeen()">.json</a>';
+      h+='<button type="button" class="btn-main btn-stop" style="padding:4px 10px;font-size:.7em" onclick="bbDelete(\''+bbEsc(ev.name)+'\')">del</button>';
+      h+='</div></div>';
+    });
+    el.innerHTML=h;
+  }).catch(function(){});
 }
 function bbDelete(n){cmd('blackbox_delete',n);setTimeout(bbRefreshList,400);}
 function bbDeleteAll(){if(confirm('Delete all recorded events from the device?')){cmd('blackbox_delete_all',true);bbSeen();setTimeout(bbRefreshList,400);}}
@@ -203,16 +234,23 @@ function ring(p){
 }
 
 function upd(d){
+  updateSuspensionControls(d);
+  updateOffsetTxStatus(d);
+  if(d && Array.isArray(d.suspension_heights)){
+    suspensionPreviewHeights=d.suspension_heights;
+    suspensionPreviewAt=d.suspension_heights_fresh?Date.now():0;
+    updateOffsetPreview();
+  }
   var fwTag=document.getElementById('fwTag');
   if(d && fwTag){
-    fwTag.textContent='WEB 3.0.0 · BLE';
+    fwTag.textContent=d.fw_version||d.fw_build||'Version unbekannt';
     fwTag.title=d.fw_build||'';
   }
   if(!d || Date.now() < busy) return;
   // Status
   var apActive=!!d.ap_active;
   pill('fsdSt', apActive, apActive?'Active':'Waiting');
-  pill('opMode', d.op_mode===1, d.op_mode===1?'Active':'Listen-Only');
+  pill('opMode', d.op_mode===1, d.op_mode===1?'Funktionen aktiv':'Funktionen aus');
 
   var hwEl=document.getElementById('hwVer');
   if(hwEl){
@@ -238,8 +276,9 @@ function upd(d){
   // OTA banner
   var otaB=document.getElementById('otaBanner');
   if(otaB){
-    otaB.style.display=d.ota?'block':'none';
-    if(d.ota) otaB.innerHTML=d.ignore_ota?'&#9888;&#xFE0F; OTA UPDATE IN PROGRESS &mdash; TX ALLOWED BY IGNORE OTA':'&#9888;&#xFE0F; OTA UPDATE IN PROGRESS &mdash; CAN TX SUSPENDED';
+    otaB.style.display=(d.ota||d.module_update_block)?'block':'none';
+    if(d.module_update_block)otaB.textContent='Modulupdate: CAN-Senden gesperrt bis zum Neustart';
+    if(d.ota&&!d.module_update_block) otaB.innerHTML=d.ignore_ota?'&#9888;&#xFE0F; OTA UPDATE IN PROGRESS &mdash; TX ALLOWED BY IGNORE OTA':'&#9888;&#xFE0F; OTA UPDATE IN PROGRESS &mdash; CAN TX SUSPENDED';
   }
 
   // Autopark banner (#180) — TX paused during an in-car Autopark episode
@@ -258,7 +297,7 @@ function upd(d){
   var act=d.op_mode===1;
   var btn=document.getElementById('btnMode');
   if(btn){
-    btn.textContent=act?'Deactivate':'Activate';
+    btn.textContent=act?'Deaktivieren':'Aktivieren';
     btn.className='btn-main '+(act?'btn-stop':'btn-act');
   }
 
@@ -290,6 +329,12 @@ function upd(d){
   if(scSel && d.gtw_supercharging_access!==undefined && document.activeElement!==scSel) scSel.value=String(d.gtw_supercharging_access);
   if(document.getElementById('swEuReg')) document.getElementById('swEuReg').checked=d.gtw_eu_region;
   if(document.getElementById('swCpTypeEU')) document.getElementById('swCpTypeEU').checked=!!d.cp_type_eu_test;
+  var cpBusSel=document.getElementById('selCpTypeBus');
+  if(d.cp_type_bus!==undefined)cpBusSel.value=String(d.cp_type_bus);
+  if(d.cp_type_active_bus!==undefined)
+    document.getElementById('cpBusDetected').textContent=d.cp_type_active_bus<0?'wartet auf Frames':'can'+d.cp_type_active_bus;
+  if(d.eu_light_bus!==undefined)
+    document.getElementById('euLightDetected').textContent=d.eu_light_bus<0?'wartet auf Frames':'can'+d.eu_light_bus;
   if(document.getElementById('swSummon')) document.getElementById('swSummon').checked=d.summon_unlock;
   if(document.getElementById('swCog')) document.getElementById('swCog').checked=d.continue_on_green;
   if(document.getElementById('swTlssc38')) document.getElementById('swTlssc38').checked=d.assist_tlssc_bit38;
@@ -336,26 +381,13 @@ function upd(d){
   if(document.getElementById('crcErr')) document.getElementById('crcErr').textContent=d.crc_errors||0;
   if(document.getElementById('crcSplit')) document.getElementById('crcSplit').textContent='RX\u00a0missed\u00a0'+(d.rx_missed_count||0)+' · bus\u00a0'+(d.bus_error_count||0)+' · TX\u00a0fail\u00a0'+(d.tx_failed_count||0);
   if(document.getElementById('rxService')) document.getElementById('rxService').textContent=(d.can_processing_task?'Independent CAN':(d.can_rx_task?'Independent RX / loop handlers':'Loop RX'))+' · CAN queue lost '+(d.can_rx_queue_dropped||0)+' · log queue lost '+(d.can_observer_dropped||0)+' · CP TX fail '+(d.can_cp_tx_failed||0)+' · MCP overflow events '+(d.can1_overflow_events||0)+' · recent '+Number(d.can1_overflow_per_s||0).toFixed(1)+'/s · RX filters '+(d.can0_filter_mode||'?')+'/'+(d.can1_filter_mode||'?');
-  if(document.getElementById('canTiming')) document.getElementById('canTiming').textContent='CAN backlog '+(d.can_rx_buffered||0)+' · max age '+(d.can_rx_max_dispatch_age_ms||0)+' ms · MCP poll gap max '+(d.can_mcp_max_poll_gap_us||0)+' us · handler max '+(d.can_max_handler_us||0)+' us · timer gap max '+(d.can_max_tick_gap_ms||0)+' ms';
+  if(Array.isArray(d.can_buses))document.getElementById('perBusCounts').textContent=d.can_buses.map(function(b,i){return 'CAN'+i+' RX '+b.rx+' TX '+b.tx+' Miss '+b.missed+' Bus '+b.bus+' Fail '+b.failed;}).join(' · ');
+  if(document.getElementById('canTiming')) document.getElementById('canTiming').textContent='CAN backlog '+(d.can_rx_buffered||0)+' · max age '+(d.can_rx_max_dispatch_age_ms||0)+' ms · MCP poll gap max '+(d.can_mcp_max_poll_gap_us||0)+' us · handler max '+(d.can_max_handler_us||0)+' us · timer gap max '+(d.can_max_tick_gap_ms||0)+' ms · Web loop max '+Number(d.loop_max_us||0)/1000+' ms · >25ms '+(d.loop_slow||0)+' · '+(d.loop_stage||'--');
   if(document.getElementById('fps')) document.getElementById('fps').textContent=(d.fps||0.0).toFixed(1);
-  httpLogAllowed=true; // capture works in both modes — needed to log through an Activate (#108)
-  if(!httpLogRunning)setHttpLogUi(false);
-  if(!httpLogRunning){
-    if(httpLogReady){
-      pill('httpLogSt',true,'Ready');
-    }else{
-      pill('httpLogSt', d.http_can_stream && d.http_can_stream.active,
-        httpLogAllowed?((d.http_can_stream && d.http_can_stream.active)?'Streaming':'Idle'):'Disabled');
-    }
-  }
-  if(!httpLogRunning&&!httpLogReady&&document.getElementById('httpLogInfo')&&!httpLogAllowed)
-    logInfo('HTTP CAN log is available only in Listen-Only mode.','var(--yellow)');
   if(document.getElementById('httpLogBuf'))
     document.getElementById('httpLogBuf').textContent=((d.http_can_stream&&d.http_can_stream.buffered)||0)+' frames';
   if(document.getElementById('httpLogDrop'))
     document.getElementById('httpLogDrop').textContent=((d.http_can_stream&&d.http_can_stream.dropped)||0)+' frames / rx-missed '+((d.http_can_stream&&d.http_can_stream.rx_missed)||0);
-  if(document.getElementById('httpLogFiltered'))
-    document.getElementById('httpLogFiltered').textContent=((d.http_can_stream&&d.http_can_stream.filtered)||0)+' frames';
 
   // Battery
   if(d.bms && d.bms.seen){
@@ -371,7 +403,7 @@ function upd(d){
       ce.textContent=(d.bms.current>=0?'+':'')+d.bms.current.toFixed(1)+'A';
       ce.style.color=d.bms.current>=0?'var(--accent)':'var(--red)';
     }
-    if(document.getElementById('bTemp')) document.getElementById('bTemp').textContent=d.bms.temp_min+'~'+d.bms.temp_max+'\u00b0C';
+    if(document.getElementById('bTemp')) document.getElementById('bTemp').textContent=(Number.isFinite(d.bms.temp_min)&&Number.isFinite(d.bms.temp_max)?d.bms.temp_min+'~'+d.bms.temp_max+'\u00b0C':'--');
   }
 
   // Performance (read-only, opt-in)
@@ -391,6 +423,10 @@ function upd(d){
       info.innerHTML='<b style="color:var(--red)">No OTA Partition</b><br>This build appears to be running from a factory/single app partition. Use an OTA partition table before relying on Web updates.';
     }
   }
+}
+
+function selectFirmware(el){
+  document.getElementById('otaFile').click();
 }
 
 function restartDevice(el){
@@ -420,6 +456,150 @@ function confirmRestart(){
   requestRestart();
 }
 
+function requestRestart(){
+  fetch('/restart',{method:'POST'}).then(function(r){
+    if(!r.ok){alert('Restart request failed');return;}
+    alert('Device restart triggered');
+    setTimeout(function(){location.reload();},8000);
+  }).catch(function(){setTimeout(function(){location.reload();},8000);});
+}
+
+function sdFormat(){
+  if(!confirm('Format SD card? All data will be lost.'))return;
+  var btn=document.getElementById('btnFmt');
+  var out=document.getElementById('fmtOut');
+  btn.disabled=true;btn.textContent='FORMATTING\u2026';
+  fetch('/sdformat',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+    out.style.display='block';
+    out.style.color=d.ok?'var(--accent)':'var(--red)';
+    out.textContent=d.msg+(d.ok?' \u2014 '+d.free_mb+' MB free':'');
+  }).catch(function(){
+    out.style.display='block';out.style.color='var(--red)';out.textContent='Request failed';
+  }).then(function(){
+    btn.disabled=false;btn.textContent='FORMAT SD CARD';
+  });
+}
+function saveWifi(){
+  var s=document.getElementById('wifiSsid').value;
+  var p=document.getElementById('wifiPass').value;
+  var h=document.getElementById('swWifiHid').checked;
+  var ss=document.getElementById('wifiStaSsid').value;
+  var sp=document.getElementById('wifiStaPass').value;
+  if(s.length<1){alert('SSID required');return;}
+  if(p!=='***' && p.length>0 && p.length<8){alert('Password must be empty or 8+ chars');return;}
+  if(sp!=='***' && ss.length>0 && sp.length>0 && sp.length<8){alert('Network password must be empty or 8+ chars');return;}
+  if(confirm('WiFi settings will be updated and the device will restart.')){
+    var b=document.activeElement; if(b&&b.tagName==='BUTTON'){b.disabled=true;b.textContent='SAVING...';}
+    cmd('wifi_cfg',{ssid:s,pass:p,hidden:h,sta_ssid:ss,sta_pass:sp});
+  }
+}
+function cmd(c,v){
+  if(ws&&ws.readyState===1) {
+    ws.send(JSON.stringify({cmd:c,value:v}));
+    busy = Date.now() + 3000;
+  }
+}
+function requestSuspension(level){
+  if(!ws||ws.readyState!==1)return;
+  document.getElementById('suspVeryLow').disabled=true;
+  document.getElementById('suspLow').disabled=true;
+  document.getElementById('suspStatus').textContent='Requesting '+(level===1?'very low':'low')+'...';
+  ws.send(JSON.stringify({cmd:'suspension_height',value:level}));
+}
+var suspensionPreviewHeights=[null,null,null,null],suspensionPreviewAt=0;
+var stanceActive=false,suspensionControlsAt=0;
+function updateSuspensionControls(d){
+  if(!d)return;
+  suspensionControlsAt=Date.now();
+  document.getElementById('suspVeryLow').disabled=!d.suspension_ready||!!d.suspension_pending;
+  document.getElementById('suspLow').disabled=!d.suspension_ready||!!d.suspension_pending;
+  document.getElementById('suspStatus').textContent=(d.suspension_status||'Warten auf Fahrzeugdaten')+
+    (d.suspension_ready?' · Manuell bereit':' · Manuelle Hoehenwahl: P, Stillstand und frische Daten erforderlich');
+  var state=d.suspension_stance_state||0;
+  stanceActive=typeof d.suspension_stance_enabled==='boolean'?d.suspension_stance_enabled:[1,2,3,4,6,7].includes(state);
+  var button=document.getElementById('suspStance');
+  button.disabled=!stanceActive&&!(d.suspension_stance_available===undefined?d.suspension_ready:d.suspension_stance_available);
+  button.setAttribute('aria-pressed',String(stanceActive));
+  button.querySelector('span').textContent=stanceActive?'Stance beenden':'Stance Mode';
+  document.getElementById('stanceStatus').textContent=[
+    'Stance-Automatik ist aus.',
+    'P erkannt · warte auf Stillstand und freie CAN-Vorlage fuer Sehr tief.',
+    'Stance aktiv · Sehr tief angefordert; D/R fordert Tief an.',
+    'D/R erkannt · Tief wird angefordert.',
+    'Tief gesendet · Automatik bleibt aktiv und wartet auf P.',
+    stanceActive?'Stance-Anforderung fehlgeschlagen · Fahrzeughoehe pruefen; naechster Gangwechsel oder aus/ein.':'Stance durch Sperre beendet · Fahrzeughoehe pruefen.',
+    'Stance aktiv · wartet auf P.',
+    'Stance aktiv · wartet auf frische Gang-/Geschwindigkeitsdaten.'
+  ][state]||'Stance-Status unbekannt.';
+  var gearLabel={1:'P',2:'R',3:'N',4:'D'}[d.suspension_gear]||'--';
+  var speedLabel=typeof d.suspension_speed_kph==='number'?d.suspension_speed_kph.toFixed(1)+' km/h':'Geschwindigkeit unbekannt';
+  document.getElementById('stanceVehicle').textContent='Gang: '+gearLabel+' · '+speedLabel;
+
+}
+function toggleStance(){
+  if(!ws||ws.readyState!==1)return;
+  document.getElementById('suspStance').disabled=true;
+  ws.send(JSON.stringify({cmd:'suspension_stance',value:stanceActive?0:1}));
+}
+var suspensionOffsetWheels=['FL','FR','RL','RR'];
+function sendOffsetTest(){
+  var values=readOffsetPreview(),notice=document.getElementById('offsetNotice');
+  if(!values){notice.textContent='Nicht gesendet: nur 4-mm-Schritte von -40 bis +40 mm.';return;}
+  if(!ws||ws.readyState!==1){notice.textContent='Nicht gesendet: keine Verbindung zum Modul.';return;}
+  var packed=0x100000;
+  values.forEach(function(v,i){packed|=(v/4+10)<<(i*5);});
+  ws.send(JSON.stringify({cmd:'suspension_offsets',value:packed}));
+  notice.textContent='Anforderung gesendet. Den bestätigten Modulstatus und die angewendeten Offsets darunter prüfen.';
+}
+function stopOffsetTest(){
+  if(!ws||ws.readyState!==1){document.getElementById('offsetNotice').textContent='Stoppen nicht bestätigt: keine Verbindung zum Modul.';return false;}
+  ws.send(JSON.stringify({cmd:'suspension_offsets',value:0}));
+  return true;
+}
+function updateOffsetTxStatus(d){
+  if(!d || typeof d.suspension_offset_enabled!=='boolean')return;
+  var labels=['Aus','Wartet auf frische Originalnachricht','CAN-Kopie gesendet; Fahrwerkswirkung unbestätigt','Pausiert: wartet auf P/Stillstand, frische Daten, freie Fahrwerksfunktion oder Echopuffer','Höhenwert ungültig oder ausserhalb des darstellbaren Bereichs','Sendefehler; pausiert bis erneut „Offsets senden“ gedrückt wird'];
+  var text=(d.suspension_offset_enabled?'Offset-Senden EIN · ':'Offset-Senden AUS · ')+(labels[d.suspension_offset_result]||'Unbekannt')+' · TX '+(d.suspension_offset_sent||0);
+  if(Array.isArray(d.suspension_offset_values))text+=' · VL/VR/HL/HR: '+d.suspension_offset_values.join('/')+' mm';
+  document.getElementById('offsetTxStatus').textContent=text;
+}
+function readOffsetPreview(){
+  var values=suspensionOffsetWheels.map(function(w){var text=document.getElementById('offset'+w).value.trim();return text===''?NaN:Number(text);});
+  return values.every(function(v){return Number.isInteger(v)&&v>=-40&&v<=40&&v%4===0;})?values:null;
+}
+function updateOffsetPreview(){
+  var offsets=readOffsetPreview(),fresh=suspensionPreviewAt!==0&&Date.now()-suspensionPreviewAt<=2000;
+  suspensionOffsetWheels.forEach(function(w,i){
+    var out=document.getElementById('height'+w),height=suspensionPreviewHeights[i];
+    document.getElementById('current'+w).innerHTML=(fresh&&Number.isFinite(height)?height:'—')+' <small>mm</small>';
+    if(!offsets){out.textContent='Offset: -40 bis +40 mm in 4-mm-Schritten';return;}
+    if(!fresh||!Number.isFinite(height)){out.textContent='Keine frischen Höhenwerte';return;}
+    var value=height+offsets[i],wire=Math.round(value/4)*4;
+    out.textContent='Ist '+height+' mm → Vorschau '+value+' mm'+
+      (value< -128||value>120?' · ausserhalb 0x199-Bereich':wire!==value?' · in 0x199 darstellbar: '+wire+' mm':'');
+  });
+}
+function saveOffsetPreview(){
+  var values=readOffsetPreview(),notice=document.getElementById('offsetNotice');
+  if(!values){notice.textContent='Nicht gespeichert: alle vier Offsets muessen zwischen -40 und +40 mm liegen und durch 4 teilbar sein.';return;}
+  try{localStorage.setItem('suspensionOffsetPreviewV1',JSON.stringify(values));notice.textContent='Im Browser gespeichert. Zum Anwenden „Offsets senden (Test)“ drücken. Aktive CAN-Offsets stehen im Modulstatus.';}
+  catch(e){notice.textContent='Browser-Speicher nicht verfuegbar. Vorschau gilt nur bis zum Neuladen.';}
+}
+function resetOffsetPreview(){
+  if(!stopOffsetTest())return;
+  suspensionOffsetWheels.forEach(function(w){document.getElementById('offset'+w).value=0;});
+  updateOffsetPreview();saveOffsetPreview();
+}
+try{
+  var restoredOffsets=JSON.parse(localStorage.getItem('suspensionOffsetPreviewV1')||'null');
+  if(Array.isArray(restoredOffsets)&&restoredOffsets.length===4&&restoredOffsets.every(function(v){return Number.isInteger(v)&&v>=-40&&v<=40&&v%4===0;}))
+    suspensionOffsetWheels.forEach(function(w,i){document.getElementById('offset'+w).value=restoredOffsets[i];});
+}catch(e){}
+setInterval(updateOffsetPreview,500);
+setInterval(function(){
+  if(!suspensionControlsAt||Date.now()-suspensionControlsAt>3000)
+    ['suspVeryLow','suspLow','suspStance'].forEach(function(id){document.getElementById(id).disabled=true;});
+},500);
 function toggleMode(){ cmd('mode',null); }
 function gv(id){ var e=document.getElementById(id); return (e&&e.value.trim()!=='')?e.value.trim():'0'; }
 function saveSigCfg(){
@@ -468,26 +648,9 @@ function logInfo(text,color){
 
 function setHttpLogUi(running){
   var btn=document.getElementById('btnHttpLog');
-  if(btn){
-    btn.disabled=!httpLogAllowed&&!httpLogReady;
-    btn.style.opacity=btn.disabled?'.45':'1';
-    if(running){
-      btn.textContent='STOP COLLECTING';
-      btn.className='btn-main btn-stop';
-    }else if(httpLogReady){
-      btn.textContent='SAVE LOG FILE';
-      btn.className='btn-main btn-blue';
-    }else if(!httpLogAllowed){
-      btn.textContent='LISTEN-ONLY REQUIRED';
-      btn.className='btn-main btn-blue';
-    }else{
-      btn.textContent='STREAM LOG AND SAVE';
-      btn.className='btn-main btn-blue';
-    }
-  }
-  var filterEl=document.getElementById('httpLogFilter');
-  if(filterEl)filterEl.disabled=running;
-  pill('httpLogSt',running||httpLogReady,running?'Collecting':(httpLogReady?'Ready':'Idle'));
+  btn.textContent=running?'Stop Logging':'Start Logging';
+  btn.className=running?'btn-main btn-stop':'btn-main btn-blue';
+  pill('httpLogSt',running||!!httpLogSaveUrl,running?'Collecting':(httpLogSaveUrl?'Ready':'Idle'));
 }
 
 function formatBytes(n){
@@ -506,129 +669,57 @@ function logFileName(){
 function clearHttpLogBlob(){
   if(httpLogSaveUrl)URL.revokeObjectURL(httpLogSaveUrl);
   httpLogSaveUrl='';
-  httpLogName='';
-  httpLogReady=false;
+  var link=document.getElementById('httpLogDownload');
+  link.hidden=true;
+  link.removeAttribute('href');
 }
 
-function prepareHttpLogFile(){
-  clearHttpLogBlob();
-  if(httpLogBytes===0){
-    logInfo('No CAN frames collected. Nothing saved.','var(--yellow)');
-    httpLogParts=[];
-    setHttpLogUi(false);
-    return;
+function stopHttpLog(reason){
+  if(!httpLogRunning)return;
+  httpLogRunning=false;
+  ++httpLogGeneration;
+  if(httpLogReader)httpLogReader.cancel().catch(function(){});
+  if(httpLogAbort)httpLogAbort.abort();
+  httpLogReader=null;
+  httpLogAbort=null;
+  if(httpLogBytes>0){
+    httpLogSaveUrl=URL.createObjectURL(new Blob(httpLogParts,{type:'text/plain;charset=utf-8'}));
+    var link=document.getElementById('httpLogDownload');
+    link.href=httpLogSaveUrl;
+    link.download=logFileName();
+    link.textContent=link.download+' ('+formatBytes(httpLogBytes)+')';
+    link.hidden=false;
+    if(!reason)link.click();
   }
-  httpLogName=logFileName();
-  httpLogReady=true;
+  httpLogParts=[];
   setHttpLogUi(false);
-  logInfo('Log ready in phone memory: '+httpLogName+' ('+formatBytes(httpLogBytes)+'). Tap SAVE LOG FILE.','var(--accent)');
+  logInfo(reason||(httpLogSaveUrl?'Download gestartet.':'Keine Logdaten empfangen.'),
+    reason||!httpLogSaveUrl?'var(--yellow)':'var(--accent)');
 }
 
-function savePreparedHttpLog(){
-  if(!httpLogReady||httpLogBytes===0)return;
-  var blob=new Blob(httpLogParts,{type:'text/plain;charset=utf-8'});
-  if(blob.size===0){
-    logInfo('No CAN frames collected. Nothing saved.','var(--yellow)');
-    return;
-  }
-  if(window.File&&navigator.canShare&&navigator.share){
-    var file=new File([blob],httpLogName,{type:'text/plain'});
-    if(navigator.canShare({files:[file]})){
-      navigator.share({files:[file],title:httpLogName}).then(function(){
-        logInfo('Save/share requested for '+httpLogName+'.','var(--accent)');
-      }).catch(function(err){
-        logInfo('Share cancelled or failed: '+(err&&err.message?err.message:'unknown')+'. Trying download link...','var(--yellow)');
-        downloadHttpLogBlob(blob);
-      });
-      return;
-    }
-  }
-  downloadHttpLogBlob(blob);
+function toggleHttpLog(){
+  if(httpLogRunning)stopHttpLog();
+  else startHttpLog();
 }
+var httpLogLastChunk=0,httpLogLastPaint=0;
+setInterval(function(){
+  if(httpLogRunning&&Date.now()-httpLogLastChunk>5000)
+    logInfo('Seit mehr als 5 s keine neuen Logdaten. Aufnahme kann gestoppt werden.','var(--yellow)');
+},1000);
 
-function downloadHttpLogBlob(blob){
-  if(httpLogSaveUrl)URL.revokeObjectURL(httpLogSaveUrl);
-  httpLogSaveUrl=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=httpLogSaveUrl;
-  a.download=httpLogName;
-  a.rel='noopener';
-  a.textContent=httpLogName;
-  a.style.position='fixed';
-  a.style.left='0';
-  a.style.bottom='0';
-  a.style.opacity='0.01';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(function(){a.remove();},1000);
-  logInfo('Save requested for '+httpLogName+'. If no file appears, tap SAVE LOG FILE again or use another browser.','var(--accent)');
+// ── Aux status poll (#124) ──
+// blackbox/capability/profile are served on demand from /api/aux, NOT in the
+// hot 1 Hz WS state push. Poll them on a slower timer so the black-box card,
+// Tap Check card and profile suggestion stay live without bloating each push.
+var auxBusy=false;
+function auxPoll(){
+  if(auxBusy)return;
+  auxBusy=true;
+  fetch('/api/aux').then(function(r){return r.json()}).then(function(a){
+    if(a){bbSync(a);capSync(a);pmSync(a);}
+  }).catch(function(){}).then(function(){auxBusy=false;});
 }
+setInterval(auxPoll,2500);
 
-
-let sendCommand=()=>{}, readList=async()=>[], restart=()=>{}, toggleLog=()=>{}, downloadFile=()=>{};
-function cmd(c,v) { return sendCommand(c,v); }
-function requestRestart() { restart(); }
-function toggleHttpLog() { toggleLog(); }
-async function bbRefreshList() {
-  try {
-    const list=await readList(), el=document.getElementById('bbList'); el.replaceChildren();
-    if(!list.length) el.textContent='No events recorded yet.';
-    for(const item of list) {
-      const row=document.createElement('div'), label=document.createElement('div'); label.textContent=item.summary?.detail||item.name; row.append(label);
-      for(const json of [false,true]) { const btn=document.createElement('button'); btn.className='btn-main btn-blue'; btn.textContent=json?'.json':'.log'; btn.onclick=()=>downloadFile(item.name,json); row.append(btn); }
-      const del=document.createElement('button'); del.textContent='Delete'; del.className='btn-main btn-stop'; del.onclick=()=>bbDelete(item.name); row.append(del); el.append(row);
-    }
-  } catch(e) { console.warn(e); }
-}
-export function configure(options) { sendCommand=options.command; readList=options.list; restart=options.restart; toggleLog=options.toggleLog; downloadFile=options.download; }
-export function render(d) { busy=0; upd(d); }
-export function auxiliary(d) { bbSync(d); capSync(d); pmSync(d); }
-export function bind() { document.querySelector('[data-ble-action="bleAction0"]')?.addEventListener('click', function(event) { cancelRestartConfirm() });
-document.querySelector('[data-ble-action="bleAction1"]')?.addEventListener('click', function(event) { confirmRestart() });
-document.querySelector('[data-ble-action="bleAction2"]')?.addEventListener('click', function(event) { cmd('14x_warning',false) });
-document.getElementById("btnMode")?.addEventListener('click', function(event) { toggleMode() });
-document.getElementById("selHwOverride")?.addEventListener('change', function(event) { cmd('hw_override',parseInt(this.value,10)) });
-document.getElementById("swIgnoreOta")?.addEventListener('change', function(event) { cmd('ignore_ota',this.checked) });
-document.getElementById("swFsdUnlock")?.addEventListener('change', function(event) { cmd('fsd_unlock',this.checked) });
-document.getElementById("swHw3Spd")?.addEventListener('change', function(event) { cmd('hw3_speed_override',this.checked) });
-document.getElementById("swNag")?.addEventListener('change', function(event) { cmd('nag',this.checked) });
-document.getElementById("swContinuousAp")?.addEventListener('change', function(event) { cmd('continuous_ap',this.checked) });
-document.getElementById("swApFirst")?.addEventListener('change', function(event) { cmd('ap_first',this.checked) });
-document.getElementById("swApFe")?.addEventListener('change', function(event) { cmd('ap_first_edge',this.checked) });
-document.getElementById("swApMi")?.addEventListener('change', function(event) { cmd('ap_first_minimal',this.checked) });
-document.getElementById("swNagF")?.addEventListener('change', function(event) { cmd('nag_faithful',this.checked) });
-document.getElementById("swSoft")?.addEventListener('change', function(event) { cmd('soft_engage',this.checked) });
-document.getElementById("swNagB")?.addEventListener('change', function(event) { cmd('nag_burst',this.checked) });
-document.getElementById("swAbrt")?.addEventListener('change', function(event) { cmd('abort_guard',this.checked) });
-document.getElementById("swBms")?.addEventListener('change', function(event) { cmd('bms',this.checked) });
-document.getElementById("swFsd")?.addEventListener('change', function(event) { cmd('force_fsd',this.checked) });
-document.getElementById("swChina")?.addEventListener('change', function(event) { cmd('china_mode',this.checked) });
-document.getElementById("swChime")?.addEventListener('change', function(event) { cmd('suppress_speed_chime',this.checked) });
-document.getElementById("swPrecond")?.addEventListener('change', function(event) { cmd('precondition',this.checked) });
-document.getElementById("swEuReg")?.addEventListener('change', function(event) { cmd('gtw_eu_region',this.checked) });
-document.getElementById("swSummon")?.addEventListener('change', function(event) { cmd('summon_unlock',this.checked) });
-document.getElementById("swCog")?.addEventListener('change', function(event) { cmd('continue_on_green',this.checked) });
-document.getElementById("swTlssc38")?.addEventListener('change', function(event) { cmd('assist_tlssc_bit38',this.checked) });
-document.getElementById("swRhd")?.addEventListener('change', function(event) { cmd('assist_rhd_override',this.checked) });
-document.getElementById("swTelOff")?.addEventListener('change', function(event) { cmd('assist_telemetry_off',this.checked) });
-document.getElementById("selApmv3")?.addEventListener('change', function(event) { cmd('apmv3_branch',parseInt(this.value,10)) });
-document.getElementById("selAccel")?.addEventListener('change', function(event) { cmd('accel_mode',parseInt(this.value,10)) });
-document.getElementById("swTrkMode")?.addEventListener('change', function(event) { cmd('track_mode_inject',this.checked) });
-document.getElementById("trkRot")?.addEventListener('input', function(event) { document.getElementById('trkRotV').textContent=this.value });
-document.getElementById("trkRot")?.addEventListener('change', function(event) { cmd('track_rotation_pct',parseInt(this.value,10)) });
-document.getElementById("trkStab")?.addEventListener('input', function(event) { document.getElementById('trkStabV').textContent=this.value });
-document.getElementById("trkStab")?.addEventListener('change', function(event) { cmd('track_stability_pct',parseInt(this.value,10)) });
-document.getElementById("swTrkPC")?.addEventListener('change', function(event) { cmd('track_post_cooling',this.checked) });
-document.getElementById("swTrkCO")?.addEventListener('change', function(event) { cmd('track_cmp_overclock',this.checked) });
-document.getElementById("selPwrBst")?.addEventListener('change', function(event) { cmd('power_boost_pct',parseInt(this.value,10)) });
-document.getElementById("pmApply")?.addEventListener('click', function(event) { pmApply() });
-document.querySelector('[data-ble-action="bleAction3"]')?.addEventListener('click', function(event) { saveSigCfg() });
-document.getElementById("swDump")?.addEventListener('change', function(event) { cmd('dump',this.checked) });
-document.getElementById("numSleep")?.addEventListener('change', function(event) { cmd('sleep',parseInt(this.value)*1000) });
-document.getElementById("capBtn")?.addEventListener('click', function(event) { cmd('capability_recheck',true) });
-document.querySelector('[data-ble-action="bleAction4"]')?.addEventListener('click', function(event) { bbDismiss() });
-document.getElementById("swBlackbox")?.addEventListener('change', function(event) { cmd('blackbox_enable',this.checked) });
-document.getElementById("bbMark")?.addEventListener('click', function(event) { cmd('blackbox_mark',true) });
-document.getElementById("bbDelAll")?.addEventListener('click', function(event) { bbDeleteAll() });
-document.getElementById("btnHttpLog")?.addEventListener('click', function(event) { toggleHttpLog() });
-document.querySelector('[data-ble-action="bleAction6"]')?.addEventListener('click', function(event) { restartDevice(this) }); }
+perfInit();
+/* BLE connects only after a user gesture. */
