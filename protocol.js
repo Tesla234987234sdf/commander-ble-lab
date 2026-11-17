@@ -64,10 +64,11 @@ export function validateImage(data, maxSize = 4 * 1024 * 1024, chipId = 0, requi
 }
 
 export class CommanderBle extends EventTarget {
-  constructor({ connectTimeout = 12000 } = {}) {
+  constructor({ connectTimeout = 12000, otaTimeout = 10000 } = {}) {
     super(); this.device = null; this.ready = false; this.pending = new Map();
     this.sequence = 0; this.queue = Promise.resolve(); this.uploading = false;
     this.connectTimeout = connectTimeout; this.connectAttempt = 0; this.activeConnectAttempt = 0;
+    this.otaTimeout = otaTimeout;
     this.lines = new JsonLines(message => this.receive(message), error => this.emit('protocolerror', error), 32768);
     this.onDisconnect = () => this.lost();
     this.onNotification = event => this.lines.push(event.target.value);
@@ -158,6 +159,18 @@ export class CommanderBle extends EventTarget {
     if (typeof characteristic?.writeValue === 'function') return characteristic.writeValue(bytes);
     throw new Error('Der Browser bietet keinen unterstützten BLE-Schreibzugriff.');
   }
+  async writeOta(bytes, withoutResponse) {
+    let timer, lost;
+    const interrupted=new Promise((_,reject)=>{
+      lost=({detail})=>{if(detail.state==='disconnected')reject(new Error('BLE-Verbindung während der Übertragung getrennt.'));};
+      this.addEventListener('state',lost);
+      timer=setTimeout(()=>{reject(new Error('BLE-Schreibzugriff dauert zu lange. Erneut verbinden.'));this.disconnect();},this.otaTimeout);
+    });
+    try{
+      const write=withoutResponse?this.data.writeValueWithoutResponse(bytes):this.write(this.data,bytes);
+      await Promise.race([write,interrupted]);
+    }finally{clearTimeout(timer);this.removeEventListener('state',lost);}
+  }
   receive(message) {
     if (!message || typeof message !== 'object') return;
     if (Number.isInteger(message.id) && this.pending.has(message.id)) {
@@ -199,7 +212,7 @@ export class CommanderBle extends EventTarget {
         this.ack = null; error ? reject(error) : resolve();
       };
       const abort = () => done(new DOMException('Update abgebrochen.', 'AbortError'));
-      const timer = setTimeout(() => done(new Error('Keine Bestätigung für Firmwareblock.')), 10000);
+      const timer = setTimeout(() => done(new Error('Keine Bestätigung für Firmwareblock.')), this.otaTimeout);
       this.ack = { offset, resolve: () => done(), reject: done };
       signal?.addEventListener('abort', abort, { once: true });
       if (signal?.aborted) abort();
@@ -213,17 +226,33 @@ export class CommanderBle extends EventTarget {
       validateImage(bytes, this.info.max_image, this.info.chip_id ?? 0, this.info.simulated === false);
       const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
       signal?.throwIfAborted();
-      const result = await this.request('ota_begin', { size: bytes.length, sha256: hash }, 15000);
+      const offer=Number.isInteger(this.info.ota_window)&&this.info.ota_protocol===2?Math.min(8,this.info.ota_window):1;
+      const args={size:bytes.length,sha256:hash};
+      if(offer>1)Object.assign(args,{ota_protocol:2,window:offer});
+      const result = await this.request('ota_begin', args, 15000);
+      const fast=offer>1&&result.ota_protocol===2;
+      const windowSize=fast?result.window:1;
+      if(!Number.isInteger(windowSize)||windowSize<1||windowSize>offer)throw new Error('Ungültiges BLE-Übertragungsfenster.');
       const chunkSize = result.chunk;
-      if (!Number.isInteger(chunkSize) || chunkSize < 16 || chunkSize > 180) throw new Error('Ungültige BLE-Blockgröße.');
+      if (!Number.isInteger(chunkSize) || chunkSize < 16 || chunkSize > (fast?240:180)) throw new Error('Ungültige BLE-Blockgröße.');
+      const withoutResponse=fast&&result.write_without_response===true&&this.data.properties?.writeWithoutResponse===true&&typeof this.data.writeValueWithoutResponse==='function';
+      const started=performance.now();
       for (let offset = 0; offset < bytes.length;) {
         signal?.throwIfAborted();
-        const next = Math.min(offset + chunkSize, bytes.length);
-        const ack = this.waitAck(next, signal);
-        const write = this.write(this.data, otaPacket(offset, bytes.subarray(offset, next)));
-        try { await Promise.all([write, ack]); }
-        catch (error) { this.ack?.reject(error); throw error; }
-        offset = next; progress(offset / bytes.length);
+        const next = Math.min(offset + chunkSize*windowSize, bytes.length);
+        let stopped=false;
+        const ack = this.waitAck(next, signal).catch(error=>{stopped=true;throw error;});
+        const writing=(async()=>{
+          for(let at=offset;at<next&&!stopped;at+=chunkSize){
+            signal?.throwIfAborted();
+            await this.writeOta(otaPacket(at,bytes.subarray(at,Math.min(at+chunkSize,next))),withoutResponse);
+          }
+        })();
+        try { await Promise.all([writing, ack]); }
+        catch (error) { stopped=true;this.ack?.reject(error);await writing.catch(()=>{});throw error; }
+        offset = next;
+        const elapsed=Math.max(1,performance.now()-started),rate=offset*1000/elapsed;
+        progress(offset / bytes.length,{sent:offset,total:bytes.length,bytesPerSecond:rate,etaSeconds:(bytes.length-offset)/rate,mode:withoutResponse?'window-no-response':fast?'window':'legacy'});
       }
       signal?.throwIfAborted();
       await this.request('ota_end', {}, 15000);

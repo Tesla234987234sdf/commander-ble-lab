@@ -1117,9 +1117,9 @@ window.CommanderTranslations={
       "device.local"
     ],
     [
-      "WEB 4.2.1 · BLE",
-      "WEB 4.2.1 · BLE",
-      "WEB 4.2.1 · BLE"
+      "WEB 4.3.0 · BLE",
+      "WEB 4.3.0 · BLE",
+      "WEB 4.3.0 · BLE"
     ],
     [
       "Bluetooth",
@@ -2395,6 +2395,21 @@ window.CommanderTranslations={
       "abort",
       "Abbruch",
       "abort"
+    ],
+    [
+      "Ungültiges BLE-Übertragungsfenster.",
+      "Ungültiges BLE-Übertragungsfenster.",
+      "Invalid BLE transfer window."
+    ],
+    [
+      "BLE-Schreibzugriff dauert zu lange. Erneut verbinden.",
+      "BLE-Schreibzugriff dauert zu lange. Erneut verbinden.",
+      "BLE write timed out. Reconnect."
+    ],
+    [
+      "Invalid OTA window",
+      "Ungültiges OTA-Übertragungsfenster",
+      "Invalid OTA window"
     ]
   ],
   "fragments": [
@@ -2822,6 +2837,21 @@ window.CommanderTranslations={
       "Aus",
       "Aus",
       "Off"
+    ],
+    [
+      "Restzeit ",
+      "Restzeit ",
+      "Remaining "
+    ],
+    [
+      "Kompatibilitätsmodus",
+      "Kompatibilitätsmodus",
+      "Compatibility mode"
+    ],
+    [
+      "Fenstermodus",
+      "Fenstermodus",
+      "Window mode"
     ]
   ]
 };
