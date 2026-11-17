@@ -54,5 +54,6 @@
   "track_post_cooling",
   "track_rotation_pct",
   "track_stability_pct",
-  "wifi_cfg"
+  "wifi_cfg",
+  "wifi_enabled"
 ]

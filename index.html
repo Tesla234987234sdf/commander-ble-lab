@@ -18,7 +18,7 @@
 <div class="hdr">
   <h1>Tesla FSD</h1>
   <div class="sub">ESP32 CAN Controller &middot; <span id="deviceHost">device.local</span><br>
-    <span class="fwtag" id="fwTag">WEB 4.0.0 · BLE</span>
+    <span class="fwtag" id="fwTag">WEB 4.1.0 · BLE</span>
   </div>
   <div class="cdot" id="dot"></div>
 </div>
@@ -39,7 +39,9 @@
 <div id="deviceName" class="ble-note">Commander-C6 auswählen</div>
 <div class="log-actions"><button id="connectButton" data-ble-independent class="btn-main btn-blue">Verbinden</button><button id="disconnectButton" data-ble-independent class="btn-main btn-stop" disabled>Trennen</button></div>
 <div class="row"><label for="intervalSelect">Statusintervall</label><select id="intervalSelect"><option value="500">500 ms</option><option value="1000" selected>1000 ms</option><option value="2000">2000 ms</option></select></div>
-<div class="ble-note">Android: Chrome · iPhone: Bluefy. Zuerst die C6-BLE-Firmware 4.0.0 installieren. Die Webseite verbindet sich direkt per Bluetooth mit der Box. <a href="./legacy/">Bisherige BLE-Lab-Oberfläche</a></div>
+<div class="row"><label class="lbl" for="swWifiEnabled">WLAN der Box<br><span class="hint">Auswahl bleibt nach Neustart erhalten. Bluetooth bleibt verfügbar.</span></label><label class="sw"><input type="checkbox" id="swWifiEnabled" disabled><span class="sl2"></span></label></div>
+<div id="wifiRadioState" class="ble-note" role="status" aria-live="polite">Zum Umschalten über Bluetooth verbinden.</div>
+<div class="ble-note">Android: Chrome · iPhone: Bluefy. Für den WLAN-Schalter C6-BLE-Firmware 4.1.0 installieren. Die Webseite verbindet sich direkt per Bluetooth mit der Box. <a href="./legacy/">Bisherige BLE-Lab-Oberfläche</a></div>
 <div id="bleError" class="ble-note ble-error" role="status" aria-live="polite"></div>
 <div id="updateNotice" class="ble-note" hidden>Neue Webversion verfügbar. <button id="reloadApp" data-ble-independent>Jetzt laden</button></div></div>
 <!-- OTA Warning -->
