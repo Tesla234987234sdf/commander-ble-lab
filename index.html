@@ -19,7 +19,7 @@
 <div class="hdr">
   <h1>Tesla FSD</h1>
   <div class="sub">T-Commander CAN &middot; <span id="deviceHost">device.local</span><br>
-    <span class="fwtag" id="fwTag">WEB 4.3.0 · BLE</span>
+    <span class="fwtag" id="fwTag">WEB 4.3.1 · BLE</span>
   </div>
   <div class="cdot" id="dot"></div>
 </div>
@@ -77,16 +77,16 @@
 </div>
 
 <section class="card suspension-card" id="suspensionCard">
-<div class="card-head"><div class="icon ic-b">F</div><h2>Fahrwerk</h2><span class="section-badge">TESTVERSION</span></div>
+<div class="card-head"><div class="icon ic-b">F</div><h2>Fahrwerk</h2></div>
 <p class="section-copy">Aktuelle Höhen und individuelle Rad-Offsets</p><div class="offset-grid">
 <label class="wheel-tile"><span class="wheel-name">Vorne links</span><span class="wheel-height" id="currentFL">— <small>mm</small></span><span class="offset-label">Offset <small>mm</small></span><input id="offsetFL" type="number" min="-40" max="40" step="4" value="0" oninput="updateOffsetPreview()" aria-label="Offset Vorne links"><output id="heightFL">Keine frischen Höhenwerte</output></label>
 <label class="wheel-tile"><span class="wheel-name">Vorne rechts</span><span class="wheel-height" id="currentFR">— <small>mm</small></span><span class="offset-label">Offset <small>mm</small></span><input id="offsetFR" type="number" min="-40" max="40" step="4" value="0" oninput="updateOffsetPreview()" aria-label="Offset Vorne rechts"><output id="heightFR">Keine frischen Höhenwerte</output></label>
 <label class="wheel-tile"><span class="wheel-name">Hinten links</span><span class="wheel-height" id="currentRL">— <small>mm</small></span><span class="offset-label">Offset <small>mm</small></span><input id="offsetRL" type="number" min="-40" max="40" step="4" value="0" oninput="updateOffsetPreview()" aria-label="Offset Hinten links"><output id="heightRL">Keine frischen Höhenwerte</output></label>
 <label class="wheel-tile"><span class="wheel-name">Hinten rechts</span><span class="wheel-height" id="currentRR">— <small>mm</small></span><span class="offset-label">Offset <small>mm</small></span><input id="offsetRR" type="number" min="-40" max="40" step="4" value="0" oninput="updateOffsetPreview()" aria-label="Offset Hinten rechts"><output id="heightRR">Keine frischen Höhenwerte</output></label>
 </div><div class="preview-actions"><button class="susp-btn quiet" onclick="saveOffsetPreview()">Offsets speichern</button><button class="susp-btn quiet" onclick="resetOffsetPreview()">Zurücksetzen</button></div>
-<div class="preview-actions"><button id="offsetSend" class="susp-btn" onclick="sendOffsetTest()">Offsets senden (Test)</button><button id="offsetStop" class="susp-btn quiet" onclick="stopOffsetTest()">Offset-Senden stoppen</button></div>
+<div class="preview-actions"><button id="offsetSend" class="susp-btn" onclick="sendOffsetTest()">Offsets senden</button><button id="offsetStop" class="susp-btn quiet" onclick="stopOffsetTest()">Offset-Senden stoppen</button></div>
 <p id="offsetTxStatus" class="section-copy">Offset-Senden aus. Nach Neustart erneut aktivieren.</p>
-<p id="offsetNotice" class="section-copy">Eingabe: -40 bis +40 mm in 4-mm-Schritten. Aktivierung bleibt bei Gangwechseln erhalten. In P bei Stillstand: frische CAN0/0x199-Nachrichten ohne 5-Hz-Drossel bearbeiten; in D/R/N pausieren. Originale bleiben auf dem Bus. Fahrwerkswirkung unbestätigt.</p>
+<p id="offsetNotice" class="section-copy">Eingabe: -40 bis +40 mm in 4-mm-Schritten. Aktivierung bleibt bei Gangwechseln erhalten.</p>
 <div class="height-actions"><button class="susp-btn" id="suspVeryLow" disabled onclick="requestSuspension(1)"><strong>Ultra tief</strong><small>Serienprofil Sehr niedrig</small></button><button class="susp-btn" id="suspLow" disabled onclick="requestSuspension(2)"><strong>Tief</strong><small>Serienprofil Niedrig</small></button></div>
 <button class="susp-btn stance-button" id="suspStance" disabled onclick="toggleStance()"><span>Stance Mode</span><small>Automatik: P sehr tief · D/R tief</small></button><div id="stanceStatus" class="section-copy">Stance-Automatik ist aus.</div><div id="stanceVehicle" class="section-copy">Gang: -- · warte auf CAN-Daten</div><div id="suspStatus" class="susp-feedback" role="status">Warten auf Fahrzeugdaten</div></section>
 

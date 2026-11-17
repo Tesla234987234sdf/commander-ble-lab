@@ -232,9 +232,9 @@ window.CommanderTranslations={
       "Reset"
     ],
     [
-      "Offsets senden (Test)",
-      "Offsets senden (Test)",
-      "Send offsets (test)"
+      "Offsets senden",
+      "Offsets senden",
+      "Send offsets"
     ],
     [
       "Offset-Senden stoppen",
@@ -247,9 +247,9 @@ window.CommanderTranslations={
       "Offset transmission off. Enable again after restart."
     ],
     [
-      "Eingabe: -40 bis +40 mm in 4-mm-Schritten. Aktivierung bleibt bei Gangwechseln erhalten. In P bei Stillstand: frische CAN0/0x199-Nachrichten ohne 5-Hz-Drossel bearbeiten; in D/R/N pausieren. Originale bleiben auf dem Bus. Fahrwerkswirkung unbestätigt.",
-      "Eingabe: -40 bis +40 mm in 4-mm-Schritten. Aktivierung bleibt bei Gangwechseln erhalten. In P bei Stillstand: frische CAN0/0x199-Nachrichten ohne 5-Hz-Drossel bearbeiten; in D/R/N pausieren. Originale bleiben auf dem Bus. Fahrwerkswirkung unbestätigt.",
-      "Input: -40 to +40 mm in 4 mm steps. Remains enabled across gear changes. In P at standstill: process fresh CAN0/0x199 messages without a 5 Hz limit; pause in D/R/N. Originals remain on the bus. Suspension response unverified."
+      "Eingabe: -40 bis +40 mm in 4-mm-Schritten. Aktivierung bleibt bei Gangwechseln erhalten.",
+      "Eingabe: -40 bis +40 mm in 4-mm-Schritten. Aktivierung bleibt bei Gangwechseln erhalten.",
+      "Input: -40 to +40 mm in 4 mm steps. Remains enabled across gear changes."
     ],
     [
       "Ultra tief",
@@ -1117,9 +1117,9 @@ window.CommanderTranslations={
       "device.local"
     ],
     [
-      "WEB 4.3.0 · BLE",
-      "WEB 4.3.0 · BLE",
-      "WEB 4.3.0 · BLE"
+      "WEB 4.3.1 · BLE",
+      "WEB 4.3.1 · BLE",
+      "WEB 4.3.1 · BLE"
     ],
     [
       "Bluetooth",
@@ -1762,14 +1762,14 @@ window.CommanderTranslations={
       "Waiting for a fresh original message"
     ],
     [
-      "CAN-Kopie gesendet; Fahrwerkswirkung unbestätigt",
-      "CAN-Kopie gesendet; Fahrwerkswirkung unbestätigt",
-      "CAN copy sent; suspension response unverified"
+      "CAN-Kopie gesendet",
+      "CAN-Kopie gesendet",
+      "CAN copy sent"
     ],
     [
-      "Pausiert: wartet auf P/Stillstand, frische Daten, freie Fahrwerksfunktion oder Echopuffer",
-      "Pausiert: wartet auf P/Stillstand, frische Daten, freie Fahrwerksfunktion oder Echopuffer",
-      "Paused: waiting for P/standstill, fresh data, suspension availability or echo buffer"
+      "Pausiert: keine frischen Höhendaten, TX gesperrt, Fahrwerksfunktion belegt oder Echopuffer voll",
+      "Pausiert: keine frischen Höhendaten, TX gesperrt, Fahrwerksfunktion belegt oder Echopuffer voll",
+      "Paused: no fresh height data, TX blocked, suspension function busy, or echo buffer full"
     ],
     [
       "Höhenwert ungültig oder ausserhalb des darstellbaren Bereichs",
@@ -1797,9 +1797,9 @@ window.CommanderTranslations={
       "Not saved: all four offsets must be between -40 and +40 mm and divisible by 4."
     ],
     [
-      "Im Browser gespeichert. Zum Anwenden „Offsets senden (Test)“ drücken. Aktive CAN-Offsets stehen im Modulstatus.",
-      "Im Browser gespeichert. Zum Anwenden „Offsets senden (Test)“ drücken. Aktive CAN-Offsets stehen im Modulstatus.",
-      "Saved in the browser. Press Send offsets (test) to apply. Active CAN offsets are shown in the device status."
+      "Im Browser gespeichert. Zum Anwenden „Offsets senden“ drücken. Aktive CAN-Offsets stehen im Modulstatus.",
+      "Im Browser gespeichert. Zum Anwenden „Offsets senden“ drücken. Aktive CAN-Offsets stehen im Modulstatus.",
+      "Saved in the browser. Press Send offsets to apply. Active CAN offsets are shown in the device status."
     ],
     [
       "Browser-Speicher nicht verfuegbar. Vorschau gilt nur bis zum Neuladen.",

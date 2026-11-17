@@ -556,7 +556,7 @@ function stopOffsetTest(){
 }
 function updateOffsetTxStatus(d){
   if(!d || typeof d.suspension_offset_enabled!=='boolean')return;
-  var labels=['Aus','Wartet auf frische Originalnachricht','CAN-Kopie gesendet; Fahrwerkswirkung unbestätigt','Pausiert: wartet auf P/Stillstand, frische Daten, freie Fahrwerksfunktion oder Echopuffer','Höhenwert ungültig oder ausserhalb des darstellbaren Bereichs','Sendefehler; pausiert bis erneut „Offsets senden“ gedrückt wird'];
+  var labels=['Aus','Wartet auf frische Originalnachricht','CAN-Kopie gesendet','Pausiert: keine frischen Höhendaten, TX gesperrt, Fahrwerksfunktion belegt oder Echopuffer voll','Höhenwert ungültig oder ausserhalb des darstellbaren Bereichs','Sendefehler; pausiert bis erneut „Offsets senden“ gedrückt wird'];
   var text=(d.suspension_offset_enabled?'Offset-Senden EIN · ':'Offset-Senden AUS · ')+(labels[d.suspension_offset_result]||'Unbekannt')+' · TX '+(d.suspension_offset_sent||0);
   if(Array.isArray(d.suspension_offset_values))text+=' · VL/VR/HL/HR: '+d.suspension_offset_values.join('/')+' mm';
   document.getElementById('offsetTxStatus').textContent=text;
@@ -580,7 +580,7 @@ function updateOffsetPreview(){
 function saveOffsetPreview(){
   var values=readOffsetPreview(),notice=document.getElementById('offsetNotice');
   if(!values){notice.textContent='Nicht gespeichert: alle vier Offsets muessen zwischen -40 und +40 mm liegen und durch 4 teilbar sein.';return;}
-  try{localStorage.setItem('suspensionOffsetPreviewV1',JSON.stringify(values));notice.textContent='Im Browser gespeichert. Zum Anwenden „Offsets senden (Test)“ drücken. Aktive CAN-Offsets stehen im Modulstatus.';}
+  try{localStorage.setItem('suspensionOffsetPreviewV1',JSON.stringify(values));notice.textContent='Im Browser gespeichert. Zum Anwenden „Offsets senden“ drücken. Aktive CAN-Offsets stehen im Modulstatus.';}
   catch(e){notice.textContent='Browser-Speicher nicht verfuegbar. Vorschau gilt nur bis zum Neuladen.';}
 }
 function resetOffsetPreview(){
