@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
@@ -14,11 +14,12 @@
 <body>
 <div class="wrap">
 
+<div class="language-bar" aria-label="Language"><label for="languageSelect">Language</label><select id="languageSelect" data-ble-independent><option value="de" lang="de" translate="no">Deutsch</option><option value="en" lang="en" translate="no">English</option></select></div>
 <!-- Header -->
 <div class="hdr">
   <h1>Tesla FSD</h1>
   <div class="sub">ESP32 CAN Controller &middot; <span id="deviceHost">device.local</span><br>
-    <span class="fwtag" id="fwTag">WEB 4.1.0 · BLE</span>
+    <span class="fwtag" id="fwTag">WEB 4.2.0 · BLE</span>
   </div>
   <div class="cdot" id="dot"></div>
 </div>
@@ -89,114 +90,8 @@
 <div class="height-actions"><button class="susp-btn" id="suspVeryLow" disabled onclick="requestSuspension(1)"><strong>Ultra tief</strong><small>Serienprofil Sehr niedrig</small></button><button class="susp-btn" id="suspLow" disabled onclick="requestSuspension(2)"><strong>Tief</strong><small>Serienprofil Niedrig</small></button></div>
 <button class="susp-btn stance-button" id="suspStance" disabled onclick="toggleStance()"><span>Stance Mode</span><small>Automatik: P sehr tief · D/R tief</small></button><div id="stanceStatus" class="section-copy">Stance-Automatik ist aus.</div><div id="stanceVehicle" class="section-copy">Gang: -- · warte auf CAN-Daten</div><div id="suspStatus" class="susp-feedback" role="status">Warten auf Fahrzeugdaten</div></section>
 
-<!-- FSD Status -->
-<div class="card">
-  <div class="card-head"><div class="icon ic-s">S</div><h2>FSD Status</h2></div>
-  <div class="row">
-    <span class="lbl">AP Status</span>
-    <span class="pill off" id="fsdSt"><span class="pd"></span>--</span>
-  </div>
-  <div class="row">
-    <span class="lbl">Mode</span>
-    <span class="pill off" id="opMode"><span class="pd"></span>--</span>
-  </div>
-  <div class="row">
-    <span class="lbl">Hardware</span>
-    <span class="pill off" id="hwVer"><span class="pd"></span>--</span>
-  </div>
-  <div class="row" id="rowHw3Spd" style="display:none">
-    <span class="lbl">HW3 Speed<span class="hint">car &rarr; sent</span></span>
-    <span id="hw3Spd" style="font-size:.8em;color:var(--text2)">--</span>
-  </div>
-  <div class="row">
-    <span class="lbl">NAG Killer</span>
-    <span class="pill off" id="nagSt"><span class="pd"></span>--</span>
-  </div>
-  <div class="row">
-    <span class="lbl">CAN Vehicle</span>
-    <span class="pill off" id="canVeh"><span class="pd"></span>--</span>
-  </div>
-</div>
-
-<!-- Battery -->
-<div class="card">
-  <div class="card-head"><div class="icon ic-b">B</div><h2>Battery</h2></div>
-  <div class="row">
-    <span class="lbl">BMS Status</span>
-    <span class="pill off" id="bmsSt"><span class="pd"></span>Waiting Frames</span>
-  </div>
-  <div class="row">
-    <span class="lbl">BMS Frames</span>
-    <span id="bmsFrames" style="font-size:.8em;color:var(--text2)">HV:0 SOC:0 TH:0</span>
-  </div>
-  <div class="hero">
-    <div class="soc-ring">
-      <svg viewBox="0 0 120 120" width="120" height="120">
-        <circle class="trk" cx="60" cy="60" r="52"/>
-        <circle class="bar" id="socBar" cx="60" cy="60" r="52"
-          stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
-      </svg>
-      <div class="soc-val">
-        <span class="soc-num" id="bSoc">--</span>
-        <span class="soc-lbl">SOC</span>
-      </div>
-    </div>
-    <div class="hg">
-      <div><div class="hv" id="bVolt">--</div><div class="hl">Voltage</div></div>
-      <div><div class="hv" id="bCurr">--</div><div class="hl">Current</div></div>
-      <div><div class="hv" id="bTemp">--</div><div class="hl">Temp</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- Performance (read-only, opt-in) -->
-<div class="card">
-  <div class="card-head"><div class="icon ic-b">P</div><h2>Performance</h2>
-    <label class="sw" style="margin-left:auto"><input type="checkbox" id="swPerf" onchange="perfToggle(this.checked)"><span class="sl2"></span></label>
-  </div>
-  <div id="perfOff" class="log-info" style="margin-bottom:0">
-    Read-only read-out derived from frames already on the bus &mdash; it transmits
-    nothing. Enable to show acceleration / braking timers, an estimated G (no IMU),
-    wheel slip and pack temperature / power. Speed &amp; est. G need any tap
-    carrying 0x257; wheel slip needs Party CAN (0x175); temp &amp; power need a
-    Vehicle-CAN tap (BMS).
-  </div>
-  <div id="perfBody" style="display:none">
-    <div class="row"><span class="lbl">Vehicle speed</span><span id="pfSpeed" style="color:var(--text2)">--</span></div>
-    <div class="sg">
-      <div class="sb"><div class="sv" id="pf050">--</div><div class="sl">0-50 km/h</div><div class="sl" id="pf050b">best --</div></div>
-      <div class="sb"><div class="sv" id="pf060mph">--</div><div class="sl">0-60 mph</div><div class="sl" id="pf060mphb">best --</div></div>
-      <div class="sb"><div class="sv" id="pf0100">--</div><div class="sl">0-100 km/h</div><div class="sl" id="pf0100b">best --</div></div>
-      <div class="sb"><div class="sv" id="pf1000">--</div><div class="sl">100-0 km/h brake</div><div class="sl" id="pf1000b">best --</div></div>
-    </div>
-    <div class="sg">
-      <div class="sb"><div class="sv" id="pfG">--</div><div class="sl">Est. long. G</div><div class="sl" id="pfGpk">peak --</div></div>
-      <div class="sb"><div class="sv" id="pfSlip">--</div><div class="sl">Wheel slip</div></div>
-      <div class="sb"><div class="sv" id="pfPow">--</div><div class="sl">Power</div></div>
-      <div class="sb"><div class="sv" id="pfTemp">--</div><div class="sl">Pack temp</div></div>
-    </div>
-    <div class="row"><span class="lbl">Battery advisory</span><span id="pfAdv" style="font-size:.8em;color:var(--text2)">--</span></div>
-    <div class="log-info" style="margin-top:8px;font-size:.76em">
-      G is estimated from dv/dt of vehicle speed (no IMU). Timers auto-arm leaving a
-      standstill, lock at the target, and reset at the next standstill; best time is
-      kept per session. Temp / power need a Vehicle-CAN tap; wheel slip needs 0x175.
-    </div>
-  </div>
-</div>
-
-<!-- CAN Stats -->
-<div class="card">
-  <div class="card-head"><div class="icon ic-d">C</div><h2>CAN Bus</h2></div>
-  <div class="sg">
-    <div class="sb"><div class="sv" id="rxCnt">0</div><div class="sl">RX Frames</div></div>
-    <div class="sb"><div class="sv" id="txCnt">0</div><div class="sl">TX Frames</div></div>
-    <div class="sb"><div class="sv" id="crcErr">0</div><div class="sl">CAN Errors</div><div class="sl" id="crcSplit">RX&nbsp;missed&nbsp;0 &middot; bus&nbsp;0 &middot; TX&nbsp;fail&nbsp;0</div><div class="sl" id="rxService">RX service starting</div><button class="btn-quiet" onclick="if(ws&amp;&amp;ws.readyState===1)ws.send(JSON.stringify({cmd:'can_counter_reset',value:1}))">Zähleranzeige zurücksetzen</button><div class="sl" id="perBusCounts"></div><div class="sl" id="canTiming"></div></div>
-    <div class="sb"><div class="sv" id="fps">0.0</div><div class="sl">Frames/s</div></div>
-  </div>
-</div>
-
 <!-- Controls -->
-<div class="card controls-section">
+<div class="card controls-section" id="controlsCard">
   <div class="card-head"><div class="icon ic-c">C</div><h2>Steuerung</h2></div>
   <button id="btnMode" class="btn-main btn-act" onclick="toggleMode()">Aktivieren</button>
   <p style="font-size:.75em;color:var(--text2)">Dieser Schalter steuert die allgemeinen Funktionen. Fahrwerksbefehle und Stance funktionieren unabhaengig davon. Deaktiviert ist kein vollstaendiger CAN-Listen-Only-Modus.</p>
@@ -399,8 +294,103 @@
 </details>
 </div>
 
+<!-- Performance (read-only, opt-in) -->
+<div class="card" id="performanceCard">
+  <div class="card-head"><div class="icon ic-b">P</div><h2>Performance</h2>
+    <label class="sw" style="margin-left:auto"><input type="checkbox" id="swPerf" onchange="perfToggle(this.checked)"><span class="sl2"></span></label>
+  </div>
+  <div id="perfOff" class="log-info" style="margin-bottom:0">
+    Read-only read-out derived from frames already on the bus &mdash; it transmits
+    nothing. Enable to show acceleration / braking timers, an estimated G (no IMU),
+    wheel slip and pack temperature / power. Speed &amp; est. G need any tap
+    carrying 0x257; wheel slip needs Party CAN (0x175); temp &amp; power need a
+    Vehicle-CAN tap (BMS).
+  </div>
+  <div id="perfBody" style="display:none">
+    <div class="row"><span class="lbl">Vehicle speed</span><span id="pfSpeed" style="color:var(--text2)">--</span></div>
+    <div class="sg">
+      <div class="sb"><div class="sv" id="pf050">--</div><div class="sl">0-50 km/h</div><div class="sl" id="pf050b">best --</div></div>
+      <div class="sb"><div class="sv" id="pf060mph">--</div><div class="sl">0-60 mph</div><div class="sl" id="pf060mphb">best --</div></div>
+      <div class="sb"><div class="sv" id="pf0100">--</div><div class="sl">0-100 km/h</div><div class="sl" id="pf0100b">best --</div></div>
+      <div class="sb"><div class="sv" id="pf1000">--</div><div class="sl">100-0 km/h brake</div><div class="sl" id="pf1000b">best --</div></div>
+    </div>
+    <div class="sg">
+      <div class="sb"><div class="sv" id="pfG">--</div><div class="sl">Est. long. G</div><div class="sl" id="pfGpk">peak --</div></div>
+      <div class="sb"><div class="sv" id="pfSlip">--</div><div class="sl">Wheel slip</div></div>
+      <div class="sb"><div class="sv" id="pfPow">--</div><div class="sl">Power</div></div>
+      <div class="sb"><div class="sv" id="pfTemp">--</div><div class="sl">Pack temp</div></div>
+    </div>
+    <div class="row"><span class="lbl">Battery advisory</span><span id="pfAdv" style="font-size:.8em;color:var(--text2)">--</span></div>
+    <div class="log-info" style="margin-top:8px;font-size:.76em">
+      G is estimated from dv/dt of vehicle speed (no IMU). Timers auto-arm leaving a
+      standstill, lock at the target, and reset at the next standstill; best time is
+      kept per session. Temp / power need a Vehicle-CAN tap; wheel slip needs 0x175.
+    </div>
+  </div>
+</div>
+
+<!-- Battery -->
+<div class="card" id="batteryCard">
+  <div class="card-head"><div class="icon ic-b">B</div><h2>Battery</h2></div>
+  <div class="row">
+    <span class="lbl">BMS Status</span>
+    <span class="pill off" id="bmsSt"><span class="pd"></span>Waiting Frames</span>
+  </div>
+  <div class="row">
+    <span class="lbl">BMS Frames</span>
+    <span id="bmsFrames" style="font-size:.8em;color:var(--text2)">HV:0 SOC:0 TH:0</span>
+  </div>
+  <div class="hero">
+    <div class="soc-ring">
+      <svg viewBox="0 0 120 120" width="120" height="120">
+        <circle class="trk" cx="60" cy="60" r="52"/>
+        <circle class="bar" id="socBar" cx="60" cy="60" r="52"
+          stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+      </svg>
+      <div class="soc-val">
+        <span class="soc-num" id="bSoc">--</span>
+        <span class="soc-lbl">SOC</span>
+      </div>
+    </div>
+    <div class="hg">
+      <div><div class="hv" id="bVolt">--</div><div class="hl">Voltage</div></div>
+      <div><div class="hv" id="bCurr">--</div><div class="hl">Current</div></div>
+      <div><div class="hv" id="bTemp">--</div><div class="hl">Temp</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FSD Status -->
+<div class="card" id="fsdStatusCard">
+  <div class="card-head"><div class="icon ic-s">S</div><h2>FSD Status</h2></div>
+  <div class="row">
+    <span class="lbl">AP Status</span>
+    <span class="pill off" id="fsdSt"><span class="pd"></span>--</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Mode</span>
+    <span class="pill off" id="opMode"><span class="pd"></span>--</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Hardware</span>
+    <span class="pill off" id="hwVer"><span class="pd"></span>--</span>
+  </div>
+  <div class="row" id="rowHw3Spd" style="display:none">
+    <span class="lbl">HW3 Speed<span class="hint">car &rarr; sent</span></span>
+    <span id="hw3Spd" style="font-size:.8em;color:var(--text2)">--</span>
+  </div>
+  <div class="row">
+    <span class="lbl">NAG Killer</span>
+    <span class="pill off" id="nagSt"><span class="pd"></span>--</span>
+  </div>
+  <div class="row">
+    <span class="lbl">CAN Vehicle</span>
+    <span class="pill off" id="canVeh"><span class="pd"></span>--</span>
+  </div>
+</div>
+
 <!-- Tap capability checker (#125) -->
-<div class="card">
+<div class="card" id="tapCheckCard">
   <div class="card-head"><div class="icon ic-d">T</div><h2>Tap Check</h2>
     <span id="capSt" class="pill off" style="margin-left:auto"><span class="pd"></span>Idle</span></div>
   <div class="log-info" style="margin-bottom:8px">
@@ -415,6 +405,17 @@
 <details class="config-section" id="adminSection">
   <summary><div class="icon ic-c">A</div><div class="card-head" style="margin:0"><h2>Administration</h2></div></summary>
   <div class="config-body">
+
+<!-- CAN Stats -->
+<div class="card" id="canBusCard">
+  <div class="card-head"><div class="icon ic-d">C</div><h2>CAN Bus</h2></div>
+  <div class="sg">
+    <div class="sb"><div class="sv" id="rxCnt">0</div><div class="sl">RX Frames</div></div>
+    <div class="sb"><div class="sv" id="txCnt">0</div><div class="sl">TX Frames</div></div>
+    <div class="sb"><div class="sv" id="crcErr">0</div><div class="sl">CAN Errors</div><div class="sl" id="crcSplit">RX&nbsp;missed&nbsp;0 &middot; bus&nbsp;0 &middot; TX&nbsp;fail&nbsp;0</div><div class="sl" id="rxService">RX service starting</div><button class="btn-quiet" onclick="if(ws&amp;&amp;ws.readyState===1)ws.send(JSON.stringify({cmd:'can_counter_reset',value:1}))">Zähleranzeige zurücksetzen</button><div class="sl" id="perBusCounts"></div><div class="sl" id="canTiming"></div></div>
+    <div class="sb"><div class="sv" id="fps">0.0</div><div class="sl">Frames/s</div></div>
+  </div>
+</div>
 
 <!-- Black-box incident recorder (#124) -->
 <div class="card">
@@ -567,6 +568,6 @@
  M5Stack ATOM Lite + ATOMIC CAN Base</div>
 </div><!-- /wrap -->
 
-<script src="./dashboard.js"></script><script type="module" src="./app.js"></script>
+<script src="./translations.js"></script><script src="./i18n.js"></script><script src="./dashboard.js"></script><script type="module" src="./app.js"></script>
 </body>
 </html>
