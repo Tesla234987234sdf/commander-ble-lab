@@ -2,9 +2,9 @@
 window.CommanderTranslations={
   "entries": [
     [
-      "ESP32 CAN Controller ·",
-      "ESP32-CAN-Steuergerät ·",
-      "ESP32 CAN Controller ·"
+      "T-Commander CAN ·",
+      "T-Commander CAN ·",
+      "T-Commander CAN ·"
     ],
     [
       "Connection lost — retrying…",
@@ -72,9 +72,9 @@ window.CommanderTranslations={
       "Connect over Bluetooth to switch Wi-Fi."
     ],
     [
-      "Android: Chrome · iPhone: Bluefy. Für den WLAN-Schalter C6-BLE-Firmware 4.1.0 installieren. Die Webseite verbindet sich direkt per Bluetooth mit der Box.",
-      "Android: Chrome · iPhone: Bluefy. Für den WLAN-Schalter C6-BLE-Firmware 4.1.0 installieren. Die Webseite verbindet sich direkt per Bluetooth mit der Box.",
-      "Android: Chrome · iPhone: Bluefy. Install C6 BLE firmware 4.1.0 for the Wi-Fi switch. This page connects directly to the device over Bluetooth."
+      "Android: Chrome · iPhone: Bluefy.",
+      "Android: Chrome · iPhone: Bluefy.",
+      "Android: Chrome · iPhone: Bluefy."
     ],
     [
       "Bisherige BLE-Lab-Oberfläche",
@@ -1102,9 +1102,9 @@ window.CommanderTranslations={
       "RESTART DEVICE"
     ],
     [
-      "Tesla FSD ESP32 · M5Stack ATOM Lite + ATOMIC CAN Base",
-      "Tesla Commander · ESP32-C6 · 2 × TWAI-CAN",
-      "Tesla Commander · ESP32-C6 · 2 × TWAI CAN"
+      "T-Commander Dual CAN",
+      "T-Commander Dual CAN",
+      "T-Commander Dual CAN"
     ],
     [
       "Tesla FSD",
@@ -1117,9 +1117,9 @@ window.CommanderTranslations={
       "device.local"
     ],
     [
-      "WEB 4.2.0 · BLE",
-      "WEB 4.2.0 · BLE",
-      "WEB 4.2.0 · BLE"
+      "WEB 4.2.1 · BLE",
+      "WEB 4.2.1 · BLE",
+      "WEB 4.2.1 · BLE"
     ],
     [
       "Bluetooth",

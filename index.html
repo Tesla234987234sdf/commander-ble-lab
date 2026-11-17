@@ -18,8 +18,8 @@
 <!-- Header -->
 <div class="hdr">
   <h1>Tesla FSD</h1>
-  <div class="sub">ESP32 CAN Controller &middot; <span id="deviceHost">device.local</span><br>
-    <span class="fwtag" id="fwTag">WEB 4.2.0 · BLE</span>
+  <div class="sub">T-Commander CAN &middot; <span id="deviceHost">device.local</span><br>
+    <span class="fwtag" id="fwTag">WEB 4.2.1 · BLE</span>
   </div>
   <div class="cdot" id="dot"></div>
 </div>
@@ -42,7 +42,7 @@
 <div class="row"><label for="intervalSelect">Statusintervall</label><select id="intervalSelect"><option value="500">500 ms</option><option value="1000" selected>1000 ms</option><option value="2000">2000 ms</option></select></div>
 <div class="row"><label class="lbl" for="swWifiEnabled">WLAN der Box<br><span class="hint">Auswahl bleibt nach Neustart erhalten. Bluetooth bleibt verfügbar.</span></label><label class="sw"><input type="checkbox" id="swWifiEnabled" disabled><span class="sl2"></span></label></div>
 <div id="wifiRadioState" class="ble-note" role="status" aria-live="polite">Zum Umschalten über Bluetooth verbinden.</div>
-<div class="ble-note">Android: Chrome · iPhone: Bluefy. Für den WLAN-Schalter C6-BLE-Firmware 4.1.0 installieren. Die Webseite verbindet sich direkt per Bluetooth mit der Box. <a href="./legacy/">Bisherige BLE-Lab-Oberfläche</a></div>
+<div class="ble-note">Android: Chrome · iPhone: Bluefy.</div>
 <div id="bleError" class="ble-note ble-error" role="status" aria-live="polite"></div>
 <div id="updateNotice" class="ble-note" hidden>Neue Webversion verfügbar. <button id="reloadApp" data-ble-independent>Jetzt laden</button></div></div>
 <!-- OTA Warning -->
@@ -118,12 +118,20 @@
   </div>
   <h3 class="control-group-title">Fahrassistenz</h3>
   <div class="row">
-    <span class="lbl">HW3 Speed Override (legacy)<br><small style="color:var(--muted)">Writes the follow-distance profile and Autopilot offset into the FSD speed fields. Off = the car's own FSD offset and profile are left alone.</small></span>
-    <label class="sw"><input type="checkbox" id="swHw3Spd" onchange="cmd('hw3_speed_override',this.checked)"><span class="sl2"></span></label>
-  </div>
-  <div class="row">
     <span class="lbl">NAG Killer</span>
     <label class="sw"><input type="checkbox" id="swNag" onchange="cmd('nag',this.checked)"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Nag EPAS-faithful (14.x, exp.)</span>
+    <label class="sw"><input type="checkbox" id="swNagF" onchange="cmd('nag_faithful',this.checked)"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">Nag Burst (14.x, exp.)</span>
+    <label class="sw"><input type="checkbox" id="swNagB" onchange="cmd('nag_burst',this.checked)"><span class="sl2"></span></label>
+  </div>
+  <div class="row">
+    <span class="lbl">HW3 Speed Override (legacy)<br><small style="color:var(--muted)">Writes the follow-distance profile and Autopilot offset into the FSD speed fields. Off = the car's own FSD offset and profile are left alone.</small></span>
+    <label class="sw"><input type="checkbox" id="swHw3Spd" onchange="cmd('hw3_speed_override',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Continuous AP</span>
@@ -142,16 +150,8 @@
     <label class="sw"><input type="checkbox" id="swApMi" onchange="cmd('ap_first_minimal',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
-    <span class="lbl">Nag EPAS-faithful (14.x, exp.)</span>
-    <label class="sw"><input type="checkbox" id="swNagF" onchange="cmd('nag_faithful',this.checked)"><span class="sl2"></span></label>
-  </div>
-  <div class="row">
     <span class="lbl">Soft Engage (14.x, exp.)</span>
     <label class="sw"><input type="checkbox" id="swSoft" onchange="cmd('soft_engage',this.checked)"><span class="sl2"></span></label>
-  </div>
-  <div class="row">
-    <span class="lbl">Nag Burst (14.x, exp.)</span>
-    <label class="sw"><input type="checkbox" id="swNagB" onchange="cmd('nag_burst',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
     <span class="lbl">Abort Guard (14.x, exp.)</span>
@@ -179,11 +179,11 @@
     <label class="sw"><input type="checkbox" id="swPrecond" onchange="cmd('precondition',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
-    <span class="lbl">EU Region (lights)<br><small style="color:var(--muted)">0x7FF mux1/mux2, 10 Hz. Kanal: <span id="euLightDetected">wartet auf Frames</span></small></span>
+    <span class="lbl">EU Region (lights)</span>
     <label class="sw"><input type="checkbox" id="swEuReg" onchange="cmd('gtw_eu_region',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
-    <span class="lbl">EU CP Type (continuous)<br><small style="color:var(--muted)">Experimental: each US 0x25D (8 bytes) triggers an IEC_CCS copy on the selected CAN channel. Requires Active. May resume during charging.</small></span>
+    <span class="lbl">EU CP Type (continuous)</span>
     <label class="sw"><input type="checkbox" id="swCpTypeEU" onchange="cmd('cp_type_eu_test',this.checked)"><span class="sl2"></span></label>
   </div>
   <div class="row">
@@ -564,8 +564,7 @@
   </div>
 </details>
 
-<div class="foot">Tesla FSD ESP32 &middot;
- M5Stack ATOM Lite + ATOMIC CAN Base</div>
+<div class="foot">T-Commander Dual CAN</div>
 </div><!-- /wrap -->
 
 <script src="./translations.js"></script><script src="./i18n.js"></script><script src="./dashboard.js"></script><script type="module" src="./app.js"></script>

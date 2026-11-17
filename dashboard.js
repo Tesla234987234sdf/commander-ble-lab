@@ -333,8 +333,6 @@ function upd(d){
   if(d.cp_type_bus!==undefined)cpBusSel.value=String(d.cp_type_bus);
   if(d.cp_type_active_bus!==undefined)
     document.getElementById('cpBusDetected').textContent=d.cp_type_active_bus<0?'wartet auf Frames':'can'+d.cp_type_active_bus;
-  if(d.eu_light_bus!==undefined)
-    document.getElementById('euLightDetected').textContent=d.eu_light_bus<0?'wartet auf Frames':'can'+d.eu_light_bus;
   if(document.getElementById('swSummon')) document.getElementById('swSummon').checked=d.summon_unlock;
   if(document.getElementById('swCog')) document.getElementById('swCog').checked=d.continue_on_green;
   if(document.getElementById('swTlssc38')) document.getElementById('swTlssc38').checked=d.assist_tlssc_bit38;
