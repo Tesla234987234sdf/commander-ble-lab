@@ -102,7 +102,6 @@ function updateControlsSummary(d){
   if(d.ap_first)items.push('AP-First');
   if(d.bms_output)items.push('BMS');
   if(d.force_fsd)items.push('Force FSD');
-  if(d.china_mode)items.push('China');
   if(d.isa_speed_enabled&&d.suppress_speed_chime)items.push('Chime');
   if(d.tlssc_restore)items.push('TLSSC');
   if(d.gtw_supercharging_access)items.push('SC Unlock');
@@ -281,7 +280,6 @@ function upd(d){
   if(d.cfg_das_id!==undefined) setSig(d);
   if(document.getElementById('swBms')) document.getElementById('swBms').checked=d.bms_output;
   if(document.getElementById('swFsd')) document.getElementById('swFsd').checked=d.force_fsd;
-  if(document.getElementById('swChina')) document.getElementById('swChina').checked=d.china_mode;
   if(document.getElementById('swChime')) document.getElementById('swChime').checked=d.suppress_speed_chime;
   if(document.getElementById('swPrecond')) document.getElementById('swPrecond').checked=d.precondition;
   if(document.getElementById('rowChime')) document.getElementById('rowChime').style.display=d.isa_speed_enabled?'flex':'none';
@@ -602,7 +600,6 @@ document.getElementById("swNagB")?.addEventListener('change', function(event) { 
 document.getElementById("swAbrt")?.addEventListener('change', function(event) { cmd('abort_guard',this.checked) });
 document.getElementById("swBms")?.addEventListener('change', function(event) { cmd('bms',this.checked) });
 document.getElementById("swFsd")?.addEventListener('change', function(event) { cmd('force_fsd',this.checked) });
-document.getElementById("swChina")?.addEventListener('change', function(event) { cmd('china_mode',this.checked) });
 document.getElementById("swChime")?.addEventListener('change', function(event) { cmd('suppress_speed_chime',this.checked) });
 document.getElementById("swPrecond")?.addEventListener('change', function(event) { cmd('precondition',this.checked) });
 document.getElementById("swEuReg")?.addEventListener('change', function(event) { cmd('gtw_eu_region',this.checked) });

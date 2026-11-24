@@ -113,7 +113,6 @@ function updateControlsSummary(d){
   if(d.ap_first)items.push('AP-First');
   if(d.bms_output)items.push('BMS');
   if(d.force_fsd)items.push('Force FSD');
-  if(d.china_mode)items.push('China');
   if(d.isa_speed_enabled&&d.suppress_speed_chime)items.push('Chime');
   if(d.tlssc_restore)items.push('TLSSC');
   if(d.gtw_supercharging_access)items.push('SC Unlock');
@@ -238,7 +237,8 @@ function upd(d){
   updateOffsetTxStatus(d);
   if(d && Array.isArray(d.suspension_heights)){
     suspensionPreviewHeights=d.suspension_heights;
-    suspensionPreviewAt=d.suspension_heights_fresh?Date.now():0;
+    suspensionPreviewAt=Date.now();
+    suspensionPreviewFresh=Array.isArray(d.suspension_heights_fresh_wheels)?d.suspension_heights_fresh_wheels:[!!d.suspension_heights_fresh,!!d.suspension_heights_fresh,!!d.suspension_heights_fresh,!!d.suspension_heights_fresh];
     updateOffsetPreview();
   }
   var fwTag=document.getElementById('fwTag');
@@ -320,7 +320,6 @@ function upd(d){
   if(d.cfg_das_id!==undefined) setSig(d);
   if(document.getElementById('swBms')) document.getElementById('swBms').checked=d.bms_output;
   if(document.getElementById('swFsd')) document.getElementById('swFsd').checked=d.force_fsd;
-  if(document.getElementById('swChina')) document.getElementById('swChina').checked=d.china_mode;
   if(document.getElementById('swChime')) document.getElementById('swChime').checked=d.suppress_speed_chime;
   if(document.getElementById('swPrecond')) document.getElementById('swPrecond').checked=d.precondition;
   if(document.getElementById('rowChime')) document.getElementById('rowChime').style.display=d.isa_speed_enabled?'flex':'none';
@@ -505,6 +504,7 @@ function requestSuspension(level){
   ws.send(JSON.stringify({cmd:'suspension_height',value:level}));
 }
 var suspensionPreviewHeights=[null,null,null,null],suspensionPreviewAt=0;
+var suspensionPreviewFresh=[false,false,false,false];
 var stanceActive=false,suspensionControlsAt=0;
 function updateSuspensionControls(d){
   if(!d)return;
@@ -542,10 +542,10 @@ function toggleStance(){
 var suspensionOffsetWheels=['FL','FR','RL','RR'];
 function sendOffsetTest(){
   var values=readOffsetPreview(),notice=document.getElementById('offsetNotice');
-  if(!values){notice.textContent='Nicht gesendet: nur 4-mm-Schritte von -40 bis +40 mm.';return;}
+  if(!values){notice.textContent='Nicht gesendet: nur 1-mm-Schritte von -40 bis +40 mm.';return;}
   if(!ws||ws.readyState!==1){notice.textContent='Nicht gesendet: keine Verbindung zum Modul.';return;}
-  var packed=0x100000;
-  values.forEach(function(v,i){packed|=(v/4+10)<<(i*5);});
+  var packed=0x10000000;
+  values.forEach(function(v,i){packed|=(v+40)<<(i*7);});
   ws.send(JSON.stringify({cmd:'suspension_offsets',value:packed}));
   notice.textContent='Anforderung gesendet. Den bestätigten Modulstatus und die angewendeten Offsets darunter prüfen.';
 }
@@ -556,31 +556,32 @@ function stopOffsetTest(){
 }
 function updateOffsetTxStatus(d){
   if(!d || typeof d.suspension_offset_enabled!=='boolean')return;
-  var labels=['Aus','Wartet auf frische Originalnachricht','CAN-Kopie gesendet','Pausiert: keine frischen Höhendaten, TX gesperrt, Fahrwerksfunktion belegt oder Echopuffer voll','Höhenwert ungültig oder ausserhalb des darstellbaren Bereichs','Sendefehler; pausiert bis erneut „Offsets senden“ gedrückt wird'];
+  var labels=['Aus','Wartet auf frische Originalnachricht','0x20B-Kopie an TX übergeben; Fahrwerkswirkung unbestätigt','Pausiert: P/Stillstand oder frische Daten fehlen, TX gesperrt oder Fahrwerk belegt','Höhenwert ungültig oder ausserhalb des darstellbaren Bereichs','Sendefehler; pausiert bis erneut „Offsets senden“ gedrückt wird'];
   var text=(d.suspension_offset_enabled?'Offset-Senden EIN · ':'Offset-Senden AUS · ')+(labels[d.suspension_offset_result]||'Unbekannt')+' · TX '+(d.suspension_offset_sent||0);
   if(Array.isArray(d.suspension_offset_values))text+=' · VL/VR/HL/HR: '+d.suspension_offset_values.join('/')+' mm';
+  if(Array.isArray(d.suspension_offset_last_tx_mm))text+=' · Zuletzt an TX übergeben VL/VR/HL/HR: '+d.suspension_offset_last_tx_mm.map(function(v){return Number.isFinite(v)?v:'—';}).join('/')+' mm';
   document.getElementById('offsetTxStatus').textContent=text;
 }
 function readOffsetPreview(){
   var values=suspensionOffsetWheels.map(function(w){var text=document.getElementById('offset'+w).value.trim();return text===''?NaN:Number(text);});
-  return values.every(function(v){return Number.isInteger(v)&&v>=-40&&v<=40&&v%4===0;})?values:null;
+  return values.every(function(v){return Number.isInteger(v)&&v>=-40&&v<=40;})?values:null;
 }
 function updateOffsetPreview(){
   var offsets=readOffsetPreview(),fresh=suspensionPreviewAt!==0&&Date.now()-suspensionPreviewAt<=2000;
   suspensionOffsetWheels.forEach(function(w,i){
-    var out=document.getElementById('height'+w),height=suspensionPreviewHeights[i];
-    document.getElementById('current'+w).innerHTML=(fresh&&Number.isFinite(height)?height:'—')+' <small>mm</small>';
-    if(!offsets){out.textContent='Offset: -40 bis +40 mm in 4-mm-Schritten';return;}
-    if(!fresh||!Number.isFinite(height)){out.textContent='Keine frischen Höhenwerte';return;}
-    var value=height+offsets[i],wire=Math.round(value/4)*4;
+    var out=document.getElementById('height'+w),height=suspensionPreviewHeights[i],wheelFresh=fresh&&suspensionPreviewFresh[i];
+    document.getElementById('current'+w).innerHTML=(Number.isFinite(height)?height:'—')+' <small>mm'+(Number.isFinite(height)&&!wheelFresh?' · veraltet':'')+'</small>';
+    if(!offsets){out.textContent='Offset: -40 bis +40 mm in 1-mm-Schritten';return;}
+    if(!wheelFresh||!Number.isFinite(height)){out.textContent=Number.isFinite(height)?'Letzter Empfang: '+height+' mm · veraltet':'Noch keine Höhenwerte empfangen';return;}
+    var value=height+offsets[i];
     out.textContent='Ist '+height+' mm → Vorschau '+value+' mm'+
-      (value< -128||value>120?' · ausserhalb 0x199-Bereich':wire!==value?' · in 0x199 darstellbar: '+wire+' mm':'');
+      (value< -512||value>510?' · ausserhalb 0x20B-Bereich':'');
   });
 }
 function saveOffsetPreview(){
   var values=readOffsetPreview(),notice=document.getElementById('offsetNotice');
-  if(!values){notice.textContent='Nicht gespeichert: alle vier Offsets muessen zwischen -40 und +40 mm liegen und durch 4 teilbar sein.';return;}
-  try{localStorage.setItem('suspensionOffsetPreviewV1',JSON.stringify(values));notice.textContent='Im Browser gespeichert. Zum Anwenden „Offsets senden“ drücken. Aktive CAN-Offsets stehen im Modulstatus.';}
+  if(!values){notice.textContent='Nicht gespeichert: alle vier Offsets muessen zwischen -40 und +40 mm liegen und ganzzahlig sein.';return;}
+  try{localStorage.setItem('suspensionOffset20BPreviewV1',JSON.stringify(values));notice.textContent='Im Browser gespeichert. Zum Anwenden „Offsets senden“ drücken. Aktive CAN-Offsets stehen im Modulstatus.';}
   catch(e){notice.textContent='Browser-Speicher nicht verfuegbar. Vorschau gilt nur bis zum Neuladen.';}
 }
 function resetOffsetPreview(){
@@ -589,8 +590,8 @@ function resetOffsetPreview(){
   updateOffsetPreview();saveOffsetPreview();
 }
 try{
-  var restoredOffsets=JSON.parse(localStorage.getItem('suspensionOffsetPreviewV1')||'null');
-  if(Array.isArray(restoredOffsets)&&restoredOffsets.length===4&&restoredOffsets.every(function(v){return Number.isInteger(v)&&v>=-40&&v<=40&&v%4===0;}))
+  var restoredOffsets=JSON.parse(localStorage.getItem('suspensionOffset20BPreviewV1')||'null');
+  if(Array.isArray(restoredOffsets)&&restoredOffsets.length===4&&restoredOffsets.every(function(v){return Number.isInteger(v)&&v>=-40&&v<=40;}))
     suspensionOffsetWheels.forEach(function(w,i){document.getElementById('offset'+w).value=restoredOffsets[i];});
 }catch(e){}
 setInterval(updateOffsetPreview,500);

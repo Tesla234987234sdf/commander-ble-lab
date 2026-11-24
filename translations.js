@@ -232,9 +232,9 @@ window.CommanderTranslations={
       "Reset"
     ],
     [
-      "Offsets senden",
-      "Offsets senden",
-      "Send offsets"
+      "Offsets senden (Test)",
+      "Offsets senden (Test)",
+      "Send offsets (test)"
     ],
     [
       "Offset-Senden stoppen",
@@ -242,14 +242,14 @@ window.CommanderTranslations={
       "Stop sending offsets"
     ],
     [
-      "Offset-Senden aus. Nach Neustart erneut aktivieren.",
-      "Offset-Senden aus. Nach Neustart erneut aktivieren.",
+      "Offset-Senden aus. Zum Test in P aktivieren.",
+      "Offset-Senden aus. Zum Test in P aktivieren.",
       "Offset transmission off. Enable again after restart."
     ],
     [
-      "Eingabe: -40 bis +40 mm in 4-mm-Schritten. Aktivierung bleibt bei Gangwechseln erhalten.",
-      "Eingabe: -40 bis +40 mm in 4-mm-Schritten. Aktivierung bleibt bei Gangwechseln erhalten.",
-      "Input: -40 to +40 mm in 4 mm steps. Remains enabled across gear changes."
+      "Eingabe: -40 bis +40 mm in 1-mm-Schritten. 0x20B-Test nur in P bei Stillstand und frischen Fahrzeugdaten. Nach Neustart AUS. Originale bleiben auf dem Bus. Fahrwerkswirkung unbestätigt.",
+      "Eingabe: -40 bis +40 mm in 1-mm-Schritten. 0x20B-Test nur in P bei Stillstand und frischen Fahrzeugdaten. Nach Neustart AUS. Originale bleiben auf dem Bus. Fahrwerkswirkung unbestätigt.",
+      "Input: -40 to +40 mm in 1 mm steps. Pauses outside Park. 0x20B testing requires fresh Park and standstill signals. Off after restart. Originals remain on the bus. Suspension response unverified."
     ],
     [
       "Ultra tief",
@@ -590,11 +590,6 @@ window.CommanderTranslations={
       "Force FSD",
       "FSD erzwingen",
       "Force FSD"
-    ],
-    [
-      "China Mode",
-      "China-Modus",
-      "China Mode"
     ],
     [
       "Suppress Chime",
@@ -1117,9 +1112,9 @@ window.CommanderTranslations={
       "device.local"
     ],
     [
-      "WEB 4.3.1 · BLE",
-      "WEB 4.3.1 · BLE",
-      "WEB 4.3.1 · BLE"
+      "WEB 4.3.4 · BLE",
+      "WEB 4.3.4 · BLE",
+      "WEB 4.3.4 · BLE"
     ],
     [
       "Bluetooth",
@@ -1737,9 +1732,9 @@ window.CommanderTranslations={
       "Unknown stance status."
     ],
     [
-      "Nicht gesendet: nur 4-mm-Schritte von -40 bis +40 mm.",
-      "Nicht gesendet: nur 4-mm-Schritte von -40 bis +40 mm.",
-      "Not sent: only 4 mm steps from -40 to +40 mm are allowed."
+      "Nicht gesendet: nur 1-mm-Schritte von -40 bis +40 mm.",
+      "Nicht gesendet: nur 1-mm-Schritte von -40 bis +40 mm.",
+      "Not sent: only 1 mm steps from -40 to +40 mm are allowed."
     ],
     [
       "Nicht gesendet: keine Verbindung zum Modul.",
@@ -1762,13 +1757,13 @@ window.CommanderTranslations={
       "Waiting for a fresh original message"
     ],
     [
-      "CAN-Kopie gesendet",
-      "CAN-Kopie gesendet",
-      "CAN copy sent"
+      "0x20B-Kopie an TX übergeben; Fahrwerkswirkung unbestätigt",
+      "0x20B-Kopie an TX übergeben; Fahrwerkswirkung unbestätigt",
+      "0x20B copy sent; suspension response unverified"
     ],
     [
-      "Pausiert: keine frischen Höhendaten, TX gesperrt, Fahrwerksfunktion belegt oder Echopuffer voll",
-      "Pausiert: keine frischen Höhendaten, TX gesperrt, Fahrwerksfunktion belegt oder Echopuffer voll",
+      "Pausiert: P/Stillstand oder frische Daten fehlen, TX gesperrt oder Fahrwerk belegt",
+      "Pausiert: P/Stillstand oder frische Daten fehlen, TX gesperrt oder Fahrwerk belegt",
       "Paused: no fresh height data, TX blocked, suspension function busy, or echo buffer full"
     ],
     [
@@ -1787,19 +1782,19 @@ window.CommanderTranslations={
       "Unknown"
     ],
     [
-      "Offset: -40 bis +40 mm in 4-mm-Schritten",
-      "Offset: -40 bis +40 mm in 4-mm-Schritten",
-      "Offset: -40 to +40 mm in 4 mm steps"
+      "Offset: -40 bis +40 mm in 1-mm-Schritten",
+      "Offset: -40 bis +40 mm in 1-mm-Schritten",
+      "Offset: -40 to +40 mm in 1 mm steps"
     ],
     [
-      "Nicht gespeichert: alle vier Offsets muessen zwischen -40 und +40 mm liegen und durch 4 teilbar sein.",
-      "Nicht gespeichert: Alle vier Offsets müssen zwischen -40 und +40 mm liegen und durch 4 teilbar sein.",
-      "Not saved: all four offsets must be between -40 and +40 mm and divisible by 4."
+      "Nicht gespeichert: alle vier Offsets muessen zwischen -40 und +40 mm liegen und ganzzahlig sein.",
+      "Nicht gespeichert: Alle vier Offsets müssen zwischen -40 und +40 mm liegen und ganzzahlig sein.",
+      "Not saved: all four offsets must be between -40 and +40 mm and divisible by 1."
     ],
     [
-      "Im Browser gespeichert. Zum Anwenden „Offsets senden“ drücken. Aktive CAN-Offsets stehen im Modulstatus.",
-      "Im Browser gespeichert. Zum Anwenden „Offsets senden“ drücken. Aktive CAN-Offsets stehen im Modulstatus.",
-      "Saved in the browser. Press Send offsets to apply. Active CAN offsets are shown in the device status."
+      "Im Browser gespeichert. Zum Anwenden „Offsets senden (Test)“ drücken. Aktive CAN-Offsets stehen im Modulstatus.",
+      "Im Browser gespeichert. Zum Anwenden „Offsets senden (Test)“ drücken. Aktive CAN-Offsets stehen im Modulstatus.",
+      "Saved in the browser. Press Send offsets (test) to apply. Active CAN offsets are shown in the device status."
     ],
     [
       "Browser-Speicher nicht verfuegbar. Vorschau gilt nur bis zum Neuladen.",
@@ -2736,7 +2731,7 @@ window.CommanderTranslations={
     [
       "ausserhalb 0x199-Bereich",
       "außerhalb 0x199-Bereich",
-      "outside 0x199 range"
+      "outside 0x20B range"
     ],
     [
       "in 0x199 darstellbar: ",
